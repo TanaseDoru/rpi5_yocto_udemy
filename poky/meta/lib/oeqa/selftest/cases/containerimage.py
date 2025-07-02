@@ -42,6 +42,7 @@ class ContainerImageTests(OESelftestTestCase):
         self.write_config("""PREFERRED_PROVIDER_virtual/kernel = "linux-dummy"
 IMAGE_FSTYPES = "container"
 PACKAGE_CLASSES = "package_ipk"
+IMAGE_FEATURES = ""
 IMAGE_BUILDINFO_FILE = ""
 INIT_MANAGER = "sysvinit"
 IMAGE_INSTALL:remove = "ssh-pregen-hostkeys"
@@ -54,6 +55,8 @@ IMAGE_INSTALL:remove = "ssh-pregen-hostkeys"
         expected_files = [
                     './',
                     '.{bindir}/theapp',
+                    '.{sysconfdir}/default/',
+                    '.{sysconfdir}/default/postinst',
                     '.{sysconfdir}/ld.so.cache',
                     '.{sysconfdir}/timestamp',
                     '.{sysconfdir}/version',

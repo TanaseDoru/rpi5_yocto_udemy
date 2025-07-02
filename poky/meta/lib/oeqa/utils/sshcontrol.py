@@ -57,10 +57,8 @@ class SSHProcess(object):
                     if select.select([self.process.stdout], [], [], 5)[0] != []:
                         data = os.read(self.process.stdout.fileno(), 1024)
                         if not data:
-                            self.process.poll()
-                            if self.process.returncode is not None:
-                                self.process.stdout.close()
-                                eof = True
+                            self.process.stdout.close()
+                            eof = True
                         else:
                             data = data.decode("utf-8")
                             output += data

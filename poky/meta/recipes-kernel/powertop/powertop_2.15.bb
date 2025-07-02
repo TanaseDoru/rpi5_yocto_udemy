@@ -11,7 +11,9 @@ SRC_URI = "git://github.com/fenrus75/powertop;protocol=https;branch=master \
            "
 SRCREV = "d51ad395436d4d1dcc3ca46e1519ffeb475bf651"
 
-LDFLAGS += "-pthread"
+S = "${WORKDIR}/git"
+
+LDFLAGS:append = " -pthread"
 
 inherit autotools gettext pkgconfig bash-completion
 

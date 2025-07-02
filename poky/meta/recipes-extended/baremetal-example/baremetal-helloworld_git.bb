@@ -8,7 +8,9 @@ SRCREV = "db2bf750eaef7fc0832e13ada8291343bbcc3afe"
 PV = "0.1+git"
 
 SRC_URI = "git://github.com/ahcbb6/baremetal-helloqemu.git;protocol=https;branch=master"
-UPSTREAM_VERSION_UNKNOWN = "1"
+UPSTREAM_VERSION_UNKNOWN="1"
+
+S = "${WORKDIR}/git"
 
 # The following variables should be set to accomodate each application
 BAREMETAL_BINNAME ?= "hello_baremetal_${MACHINE}"
@@ -20,6 +22,7 @@ IMAGE_NAME_SUFFIX ?= ""
 # package to be created since we might have some way of updating the baremetal
 # firmware from Linux
 inherit baremetal-image
+
 
 # startup code for x86 uses NASM syntax
 DEPENDS:qemux86:append = " nasm-native"

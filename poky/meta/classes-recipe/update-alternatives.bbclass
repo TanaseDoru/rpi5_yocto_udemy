@@ -73,6 +73,24 @@ UPDALTVARS  = "ALTERNATIVE ALTERNATIVE_LINK_NAME ALTERNATIVE_TARGET ALTERNATIVE_
 
 PACKAGE_WRITE_DEPS += "virtual/update-alternatives-native"
 
+def gen_updatealternativesvardeps(d):
+    pkgs = (d.getVar("PACKAGES") or "").split()
+    vars = (d.getVar("UPDALTVARS") or "").split()
+
+    # First compute them for non_pkg versions
+    for v in vars:
+        for flag in sorted((d.getVarFlags(v) or {}).keys()):
+            if flag == "doc" or flag == "vardeps" or flag == "vardepsexp":
+                continue
+            d.appendVar('%s_VARDEPS' % (v), ' %s:%s' % (flag, d.getVarFlag(v, flag, False)))
+
+    for p in pkgs:
+        for v in vars:
+            for flag in sorted((d.getVarFlags("%s:%s" % (v,p)) or {}).keys()):
+                if flag == "doc" or flag == "vardeps" or flag == "vardepsexp":
+                    continue
+                d.appendVar('%s_VARDEPS_%s' % (v,p), ' %s:%s' % (flag, d.getVarFlag('%s:%s' % (v,p), flag, False)))
+
 def ua_extend_depends(d):
     if not 'virtual/update-alternatives' in d.getVar('PROVIDES'):
         d.appendVar('DEPENDS', ' virtual/${MLPREFIX}update-alternatives')
@@ -94,6 +112,9 @@ python __anonymous() {
     if not update_alternatives_enabled(d):
         return
 
+    # compute special vardeps
+    gen_updatealternativesvardeps(d)
+
     # extend the depends to include virtual/update-alternatives
     ua_extend_depends(d)
 }
@@ -103,20 +124,13 @@ def gen_updatealternativesvars(d):
     pkgs = (d.getVar("PACKAGES") or "").split()
     vars = (d.getVar("UPDALTVARS") or "").split()
 
-    # First compute them for non_pkg versions
     for v in vars:
-        for flag in sorted((d.getVarFlags(v) or {}).keys()):
-            if flag == "doc" or flag == "vardeps" or flag == "vardepsexp":
-                continue
-            ret.append(v + "[" + flag + "]")
+        ret.append(v + "_VARDEPS")
 
     for p in pkgs:
         for v in vars:
-            for flag in sorted((d.getVarFlags("%s:%s" % (v,p)) or {}).keys()):
-                if flag == "doc" or flag == "vardeps" or flag == "vardepsexp":
-                    continue
-                ret.append('%s:%s' % (v,p) + "[" + flag + "]")
-
+            ret.append(v + ":" + p)
+            ret.append(v + "_VARDEPS_" + p)
     return " ".join(ret)
 
 # Now the new stuff, we use a custom function to generate the right values

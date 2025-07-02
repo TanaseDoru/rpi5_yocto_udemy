@@ -6,7 +6,7 @@ require gcc-shared-source.inc
 # These can be overridden by the version specific .inc file.
 
 # gcc 3.x expects 'f77', 4.0 expects 'f95', 4.1 and 4.2 expect 'fortran'
-FORTRAN ??= ",fortran"
+FORTRAN ?= ",f77"
 LANGUAGES ?= "c,c++${FORTRAN}"
 
 EXTRA_OECONF_BASE ?= ""
@@ -116,5 +116,7 @@ do_configure () {
 	export CXXFLAGS_FOR_TARGET="${TARGET_CXXFLAGS}"
 	export LDFLAGS_FOR_TARGET="${TARGET_LDFLAGS}"
 
+
 	oe_runconf
 }
+

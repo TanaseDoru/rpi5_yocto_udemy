@@ -19,6 +19,6 @@ SRC_URI = "\
     file://run-ptest \
 "
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 inherit ptest

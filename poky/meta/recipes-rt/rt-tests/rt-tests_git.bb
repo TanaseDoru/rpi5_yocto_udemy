@@ -13,7 +13,6 @@ SRC_URI += " \
             file://run-ptest \
             file://rt_bmark.py \
             file://0001-Makefile-Allow-for-CC-and-AR-to-be-overridden.patch \
-            file://0001-sched_attr-Do-not-define-for-glibc-2.41.patch \
            "
 
 # rt-tests needs PI mutex support in libc
@@ -28,7 +27,7 @@ do_install() {
 }
 
 do_install_ptest() {
-        cp ${UNPACKDIR}/rt_bmark.py ${D}${PTEST_PATH}
+        cp ${WORKDIR}/rt_bmark.py ${D}${PTEST_PATH}
 }
 
 RDEPENDS:${PN}-ptest += " stress-ng python3 python3-multiprocessing python3-datetime python3-misc"

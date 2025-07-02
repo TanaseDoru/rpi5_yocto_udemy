@@ -8,7 +8,9 @@
 #
 # Usage: Set GTKIMMODULES_PACKAGES to the packages that needs to update the inputmethod modules
 
-PACKAGE_WRITE_DEPS += "qemuwrapper-cross"
+PACKAGE_WRITE_DEPS += "qemu-native"
+
+inherit qemu
 
 GTKIMMODULES_PACKAGES ?= "${PN}"
 

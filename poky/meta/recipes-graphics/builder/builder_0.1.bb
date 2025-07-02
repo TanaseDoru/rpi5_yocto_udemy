@@ -7,7 +7,7 @@ LIC_FILES_CHKSUM = "file://builder_session.sh;endline=5;md5=84796c3c41785d86100f
 SRC_URI = "file://builder_session.sh \
           "
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 RDEPENDS:${PN} = "mini-x-session"
 
@@ -28,5 +28,4 @@ do_install () {
 	chown  builder.builder ${D}${sysconfdir}/mini_x/session.d/builder_session.sh
 }
 
-# do not report CVEs for other builder apps
-CVE_PRODUCT = "yoctoproject:builder"
+CVE_STATUS[CVE-2008-4178] = "cpe-incorrect: This CVE is for an unrelated builder"

@@ -31,7 +31,7 @@ class BBUIHelper:
 
         if isinstance(event, bb.build.TaskStarted):
             tid = event._fn + ":" + event._task
-            if event._mc != "":
+            if event._mc != "default":
                 self.running_tasks[tid] = { 'title' : "mc:%s:%s %s" % (event._mc, event._package, event._task), 'starttime' : time.time(), 'pid' : event.pid }
             else:
                 self.running_tasks[tid] = { 'title' : "%s %s" % (event._package, event._task), 'starttime' : time.time(), 'pid' : event.pid }

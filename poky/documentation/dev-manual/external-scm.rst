@@ -12,13 +12,10 @@ revision number for changes. Currently, you can do this with Apache
 Subversion (SVN), Git, and Bazaar (BZR) repositories.
 
 To enable this behavior, the :term:`PV` of
-the recipe needs to include a ``+`` sign in its assignment.
-Here is an example::
+the recipe needs to reference
+:term:`SRCPV`. Here is an example::
 
-   PV = "1.2.3+git"
-
-:term:`Bitbake` later includes the source control information in :term:`PKGV`
-during the packaging phase.
+   PV = "1.2.3+git${SRCPV}"
 
 Then, you can add the following to your
 ``local.conf``::

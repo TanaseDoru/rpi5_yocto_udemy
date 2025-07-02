@@ -16,11 +16,8 @@ SRC_URI[sha256sum] = "efa50ef983137eefc0a02fdb51509d624b5e3295c980aa127ceee41834
 inherit autotools gettext texinfo ptest
 
 CVE_STATUS[CVE-2010-4226] = "not-applicable-platform: Issue applies to use of cpio in SUSE/OBS"
-CVE_STATUS[CVE-2023-7216] = "disputed: intended behaviour, see https://lists.gnu.org/archive/html/bug-cpio/2024-03/msg00000.html"
 
 EXTRA_OECONF += "DEFAULT_RMT_DIR=${sbindir}"
-
-CFLAGS += "-std=gnu17"
 
 do_install () {
     autotools_do_install
@@ -37,10 +34,10 @@ do_install () {
 }
 
 do_compile_ptest() {
-    # Forcibly regenerate this script so we get our --am-fmt option
-    rm -f ${S}/tests/testsuite
-    oe_runmake -C ${B}/tests/ testsuite
-
+    oe_runmake -C ${B}/gnu/ check
+    oe_runmake -C ${B}/lib/ check
+    oe_runmake -C ${B}/rmt/ check
+    oe_runmake -C ${B}/src/ check
     oe_runmake -C ${B}/tests/ genfile
 }
 
@@ -53,7 +50,7 @@ do_install_ptest() {
     install --mode=755 ${B}/tests/atlocal ${D}${PTEST_PATH}/tests/
     install --mode=755 ${B}/tests/genfile ${D}${PTEST_PATH}/tests/
     install --mode=755 ${S}/tests/testsuite ${D}${PTEST_PATH}/tests/
-    install --mode=755 ${UNPACKDIR}/test.sh ${D}${PTEST_PATH}/test.sh
+    install --mode=755 ${WORKDIR}/test.sh ${D}${PTEST_PATH}/test.sh
     sed -i "s#@PTEST_PATH@#${PTEST_PATH}#g" ${D}${PTEST_PATH}/test.sh
 }
 
@@ -66,10 +63,10 @@ do_install_ptest_base:append() {
 }
 
 # The tests need to run as a non-root user, so pull in the ptest user
-DEPENDS:append:class-target = " ${@bb.utils.contains('PTEST_ENABLED', '1', 'ptest-runner', '', d)}"
-PACKAGE_WRITE_DEPS:append:class-target = " ${@bb.utils.contains('PTEST_ENABLED', '1', 'ptest-runner', '', d)}"
+DEPENDS:append:class-target = "${@bb.utils.contains('PTEST_ENABLED', '1', ' ptest-runner', '', d)}"
+PACKAGE_WRITE_DEPS += "ptest-runner"
 
-RDEPENDS:${PN}-ptest += "ptest-runner coreutils"
+RDEPENDS:${PN}-ptest += "ptest-runner"
 
 PACKAGES =+ "${PN}-rmt"
 

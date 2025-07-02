@@ -40,6 +40,11 @@ HOST_CC_ARCH = "${BUILD_CC_ARCH}"
 HOST_LD_ARCH = "${BUILD_LD_ARCH}"
 HOST_AS_ARCH = "${BUILD_AS_ARCH}"
 
+CPPFLAGS = "${BUILD_CPPFLAGS}"
+CFLAGS = "${BUILD_CFLAGS}"
+CXXFLAGS = "${BUILD_CXXFLAGS}"
+LDFLAGS = "${BUILD_LDFLAGS}"
+
 STAGING_BINDIR = "${STAGING_BINDIR_NATIVE}"
 STAGING_BINDIR_CROSS = "${STAGING_BINDIR_NATIVE}"
 
@@ -53,20 +58,17 @@ PTEST_ENABLED = "0"
 export CONFIG_SITE = "${COREBASE}/meta/site/native"
 
 # set the compiler as well. It could have been set to something else
-CC = "${BUILD_CC}"
-CXX = "${BUILD_CXX}"
-FC = "${BUILD_FC}"
-CPP = "${BUILD_CPP}"
-LD = "${BUILD_LD}"
-CCLD = "${BUILD_CCLD}"
-AR = "${BUILD_AR}"
-AS = "${BUILD_AS}"
-RANLIB = "${BUILD_RANLIB}"
-STRIP = "${BUILD_STRIP}"
-NM = "${BUILD_NM}"
-OBJCOPY = "${BUILD_OBJCOPY}"
-OBJDUMP = "${BUILD_OBJDUMP}"
-READELF = "${BUILD_READELF}"
+export CC = "${BUILD_CC}"
+export CXX = "${BUILD_CXX}"
+export FC = "${BUILD_FC}"
+export CPP = "${BUILD_CPP}"
+export LD = "${BUILD_LD}"
+export CCLD = "${BUILD_CCLD}"
+export AR = "${BUILD_AR}"
+export AS = "${BUILD_AS}"
+export RANLIB = "${BUILD_RANLIB}"
+export STRIP = "${BUILD_STRIP}"
+export NM = "${BUILD_NM}"
 
 # Path prefixes
 base_prefix = "${STAGING_DIR_NATIVE}"
@@ -122,7 +124,6 @@ SSTATE_SCAN_CMD ?= "${SSTATE_SCAN_CMD_NATIVE}"
 INHIBIT_SYSROOT_STRIP ?= "${@oe.utils.vartrue('DEBUG_BUILD', '1', '', d)}"
 
 python native_virtclass_handler () {
-    import re
     pn = e.data.getVar("PN")
     if not pn.endswith("-native"):
         return
@@ -162,20 +163,10 @@ python native_virtclass_handler () {
                 newdeps.append(dep.replace(pn, bpn) + "-native")
             else:
                 newdeps.append(dep)
-        output_varname = varname
-        # Handle ${PN}-xxx -> ${BPN}-xxx-native
-        if suffix != "${PN}" and "${PN}" in suffix:
-            output_varname = varname.replace("${PN}", "${BPN}") + "-native"
-            d.renameVar(varname, output_varname)
-        d.setVar(output_varname, " ".join(newdeps))
+        d.setVar(varname, " ".join(newdeps))
 
     map_dependencies("DEPENDS", e.data, selfref=False)
-    # We need to handle things like ${@bb.utils.contains('PTEST_ENABLED', '1', '${PN}-ptest', '', d)}
-    # and not pass ${PN}-test since in the native case it would be ignored. This does mean we ignore
-    # anonymous python derived PACKAGES entries.
-    for pkg in re.split(r"\${@(?:{.*?}|.)+?}|\s", d.getVar("PACKAGES", False)):
-        if not pkg:
-            continue
+    for pkg in e.data.getVar("PACKAGES", False).split():
         map_dependencies("RDEPENDS", e.data, pkg)
         map_dependencies("RRECOMMENDS", e.data, pkg)
         map_dependencies("RSUGGESTS", e.data, pkg)

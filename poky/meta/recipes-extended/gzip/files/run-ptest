@@ -1,3 +1,6 @@
 #!/bin/sh
 
-VERBOSE=1 make -C src/tests check
+cd src/tests
+
+make check
+

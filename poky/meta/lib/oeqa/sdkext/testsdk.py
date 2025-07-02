@@ -82,8 +82,7 @@ class TestSDKExt(TestSDKBase):
                 host_pkg_manifest=host_pkg_manifest)
 
             try:
-                modules = (d.getVar("TESTSDK_SUITES") or "").split()
-                tc.loadTests(OESDKExtTestContextExecutor.default_cases, modules)
+                tc.loadTests(OESDKExtTestContextExecutor.default_cases)
             except Exception as e:
                 import traceback
                 bb.fatal("Loading tests failed:\n%s" % traceback.format_exc())

@@ -7,10 +7,15 @@
 
 import base
 import os
-import patchtest_patterns
+import parse_signed_off_by
+import parse_upstream_status
 import pyparsing
 
 class TestPatch(base.Base):
+
+    re_cve_pattern = pyparsing.Regex("CVE\-\d{4}\-\d+")
+    re_cve_payload_tag = pyparsing.Regex("\+CVE:(\s+CVE\-\d{4}\-\d+)+")
+    upstream_status_regex = pyparsing.AtLineStart("+" + "Upstream-Status")
 
     @classmethod
     def setUpClassLocal(cls):
@@ -20,17 +25,17 @@ class TestPatch(base.Base):
             if patch.path.endswith('.patch') and patch.is_added_file:
                 cls.newpatches.append(patch)
 
-        cls.mark = str(patchtest_patterns.signed_off_by_prefix).strip('"')
+        cls.mark = str(parse_signed_off_by.signed_off_by_mark).strip('"')
 
         # match PatchSignedOffBy.mark with '+' preceding it
-        cls.prog = patchtest_patterns.patch_signed_off_by
+        cls.prog = parse_signed_off_by.patch_signed_off_by
 
     def setUp(self):
         if self.unidiff_parse_error:
             self.skip('Parse error %s' % self.unidiff_parse_error)
 
-        self.valid_status = ", ".join(patchtest_patterns.upstream_status_nonliteral_valid_status)
-        self.standard_format = "Upstream-Status: <Valid status>"
+        self.valid_status    = ', '.join(parse_upstream_status.upstream_status_nonliteral_valid_status)
+        self.standard_format = 'Upstream-Status: <Valid status>'
 
         # we are just interested in series that introduce CVE patches, thus discard other
         # possibilities: modification to current CVEs, patch directly introduced into the
@@ -45,62 +50,31 @@ class TestPatch(base.Base):
 
         for newpatch in TestPatch.newpatches:
             payload = newpatch.__str__()
-            if not patchtest_patterns.upstream_status_regex.search_string(payload):
-                self.fail(
-                    "Added patch file is missing Upstream-Status: <Valid status> in the commit message",
-                    data=[
-                        ("Standard format", self.standard_format),
-                        ("Valid status", self.valid_status),
-                    ],
-                )
+            if not self.upstream_status_regex.search_string(payload):
+                self.fail('Added patch file is missing Upstream-Status: <Valid status> in the commit message',
+                          data=[('Standard format', self.standard_format), ('Valid status', self.valid_status)])
             for line in payload.splitlines():
-                if patchtest_patterns.patchmetadata_regex.match(line):
+                if self.patchmetadata_regex.match(line):
                     continue
-                if patchtest_patterns.upstream_status_regex.search_string(line):
-                    if patchtest_patterns.inappropriate.searchString(line):
-                        try:
-                            patchtest_patterns.upstream_status_inappropriate_info.parseString(
-                                line.lstrip("+")
-                            )
-                        except pyparsing.ParseException as pe:
-                            self.fail(
-                                "Upstream-Status is Inappropriate, but no reason was provided",
-                                data=[
-                                    ("Current", pe.pstr),
-                                    (
-                                        "Standard format",
-                                        "Upstream-Status: Inappropriate [reason]",
-                                    ),
-                                ],
-                            )
-                    elif patchtest_patterns.submitted.searchString(line):
-                        try:
-                            patchtest_patterns.upstream_status_submitted_info.parseString(
-                                line.lstrip("+")
-                            )
-                        except pyparsing.ParseException as pe:
-                            self.fail(
-                                "Upstream-Status is Submitted, but it is not mentioned where",
-                                data=[
-                                    ("Current", pe.pstr),
-                                    (
-                                        "Standard format",
-                                        "Upstream-Status: Submitted [where]",
-                                    ),
-                                ],
-                            )
-                    else:
-                        try:
-                            patchtest_patterns.upstream_status.parseString(line.lstrip("+"))
-                        except pyparsing.ParseException as pe:
-                            self.fail(
-                                "Upstream-Status is in incorrect format",
-                                data=[
-                                    ("Current", pe.pstr),
-                                    ("Standard format", self.standard_format),
-                                    ("Valid status", self.valid_status),
-                                ],
-                            )
+                if self.upstream_status_regex.search_string(line):
+                        if parse_upstream_status.inappropriate_status_mark.searchString(line):
+                            try:
+                                parse_upstream_status.upstream_status_inappropriate_info.parseString(line.lstrip('+'))
+                            except pyparsing.ParseException as pe:
+                                self.fail('Upstream-Status is Inappropriate, but no reason was provided',
+                                          data=[('Current', pe.pstr), ('Standard format', 'Upstream-Status: Inappropriate [reason]')])
+                        elif parse_upstream_status.submitted_status_mark.searchString(line):
+                            try:
+                                parse_upstream_status.upstream_status_submitted_info.parseString(line.lstrip('+'))
+                            except pyparsing.ParseException as pe:
+                                self.fail('Upstream-Status is Submitted, but it is not mentioned where',
+                                          data=[('Current', pe.pstr), ('Standard format', 'Upstream-Status: Submitted [where]')])
+                        else:
+                            try:
+                                parse_upstream_status.upstream_status.parseString(line.lstrip('+'))
+                            except pyparsing.ParseException as pe:
+                                self.fail('Upstream-Status is in incorrect format',
+                                          data=[('Current', pe.pstr), ('Standard format', self.standard_format), ('Valid status', self.valid_status)])
 
     def test_signed_off_by_presence(self):
         if not TestPatch.newpatches:
@@ -109,7 +83,7 @@ class TestPatch(base.Base):
         for newpatch in TestPatch.newpatches:
             payload = newpatch.__str__()
             for line in payload.splitlines():
-                if patchtest_patterns.patchmetadata_regex.match(line):
+                if self.patchmetadata_regex.match(line):
                     continue
                 if TestPatch.prog.search_string(payload):
                     break
@@ -118,12 +92,10 @@ class TestPatch(base.Base):
 
     def test_cve_tag_format(self):
         for commit in TestPatch.commits:
-            if patchtest_patterns.cve.search_string(
-                commit.shortlog
-            ) or patchtest_patterns.cve.search_string(commit.commit_message):
+            if self.re_cve_pattern.search_string(commit.shortlog) or self.re_cve_pattern.search_string(commit.commit_message):
                 tag_found = False
                 for line in commit.payload.splitlines():
-                    if patchtest_patterns.cve_payload_tag.search_string(line):
+                    if self.re_cve_payload_tag.search_string(line):
                         tag_found = True
                         break
                 if not tag_found:

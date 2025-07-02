@@ -5,9 +5,9 @@ LICENSE = "MIT"
 
 USERADD_DEPENDS = "bcreategroup"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
-EXCLUDE_FROM_WORLD = "1"
+EXCLUDE_FROM_WORLD="1"
 
 inherit useradd allarch
 

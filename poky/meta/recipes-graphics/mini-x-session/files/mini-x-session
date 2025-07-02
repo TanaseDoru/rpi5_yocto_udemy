@@ -35,6 +35,5 @@ xrandr -s 1024x768
 # Default files to run if $HOME/.mini_x/session or /etc/mini_x/session
 # dont exist. 
 
-x-terminal-emulator &
-
+matchbox-terminal&
 exec matchbox-window-manager

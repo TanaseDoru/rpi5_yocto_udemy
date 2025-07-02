@@ -5,7 +5,7 @@ LIC_FILES_CHKSUM = "file://makedevs.c;beginline=2;endline=2;md5=c3817b10013a3007
 SECTION = "base"
 SRC_URI = "file://makedevs.c"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 FILES:${PN}:append:class-nativesdk = " ${datadir}"
 

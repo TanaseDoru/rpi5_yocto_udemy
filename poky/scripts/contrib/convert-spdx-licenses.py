@@ -93,7 +93,7 @@ license_map = {
 "Nauman" : "Naumen",
 "tcl" : "TCL",
 "vim" : "Vim",
-"SGIv1" : "SGI-OpenGL",
+"SGIv1" : "SGI-1",
 }
 
 def processfile(fn):

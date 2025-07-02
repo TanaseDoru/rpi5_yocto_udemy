@@ -37,6 +37,9 @@ CACHED_CONFIGUREVARS += "${@bb.utils.contains('PACKAGECONFIG', 'readline', '', '
                          ${@bb.utils.contains('PACKAGECONFIG', 'textstyle', '', ' \
                            ac_cv_libtextstyle=no', d)}"
 
+# The automatic m4 path detection gets confused, so force the right value
+acpaths = "-I ./m4"
+
 do_compile:prepend() {
 	for i in mfcalc calc++ rpcalc; do mkdir -p ${B}/examples/$i; done
 }

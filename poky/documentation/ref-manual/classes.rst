@@ -128,43 +128,6 @@ It's useful to have some idea of how the tasks defined by the
 -  :ref:`ref-tasks-install` --- runs ``make install`` and
    passes in ``${``\ :term:`D`\ ``}`` as ``DESTDIR``.
 
-.. _ref-classes-barebox:
-
-``barebox``
-===========
-
-The :ref:`ref-classes-barebox` class manages building the barebox bootloader.
-
-If a file named ``defconfig`` is included in the :term:`SRC_URI`, it will be
-copied to ``.config`` in the build directory and used as the barebox
-configuration.
-Instead of providing a ``defconfig`` file, you can set :term:`BAREBOX_CONFIG`
-to a defconfig provided by the barebox source tree.
-If neither ``defconfig`` nor :term:`BAREBOX_CONFIG` is specified, the class
-will raise an error.
-
-The :ref:`ref-classes-barebox` class supports config fragments and internally
-includes the :ref:`ref-classes-cml1` class to provide `Kconfig
-<https://docs.kernel.org/kbuild/kconfig-language.html>`__ support for
-barebox, enabling tasks such as :ref:`ref-tasks-menuconfig` and
-:ref:`ref-tasks-diffconfig`.
-
-The generated barebox binaries are deployed to
-:term:`DEPLOY_DIR_IMAGE` as well as installed to ``BAREBOX_INSTALL_PATH``
-(``/boot`` by default) making them part of the recipe’s base package.
-This setup supports both using the barebox binaries as independent artifacts
-and installing them into a rootfs.
-:term:`BAREBOX_BINARY` can be used to select a distinct binary to deploy and
-install.
-If ``barebox`` is set as the :term:`EFI_PROVIDER`, the class will leverage
-:oe_git:`conf/image-uefi.conf </openembedded-core/tree/meta/conf/image-uefi.conf>`
-to define the default installation paths and naming conventions.
-
-The compiled-in barebox environment can be extended by adding environment files
-to the ``BAREBOX_ENV_DIR``.
-The ``BAREBOX_FIRMWARE_DIR`` variable allows you to specify the firmware blob
-search directory, enabling loading of additional firmware like TF-A or OP-TEE.
-
 .. _ref-classes-base:
 
 ``base``
@@ -196,38 +159,27 @@ software that includes bash-completion data.
 ``bin_package``
 ===============
 
-The :ref:`ref-classes-bin-package` class is a helper class for recipes, that
-disables the :ref:`ref-tasks-configure` and :ref:`ref-tasks-compile` tasks and
-copies the content of the :term:`S` directory into the :term:`D` directory. This
-is useful for installing binary packages (e.g. RPM packages) by passing the
-package in the :term:`SRC_URI` variable and inheriting this class.
-
-For RPMs and other packages that do not contain a subdirectory, you should set
-the :term:`SRC_URI` option ``subdir`` to :term:`BP` so that the contents are
-extracted to the directory expected by the default value of :term:`S`. For
-example::
-
-   SRC_URI = "https://example.com/downloads/somepackage.rpm;subdir=${BP}"
-
-This class can also be used for tarballs. For example::
-
-   SRC_URI = "file://somepackage.tar.xz;subdir=${BP}"
-
-The :ref:`ref-classes-bin-package` class will copy the extracted content of the
-tarball from :term:`S` to :term:`D`.
-
-This class assumes that the content of the package as installed in :term:`S`
-mirrors the expected layout once installed on the target, which is generally the
-case for binary packages. For example, an RPM package for a library would
-usually contain the ``usr/lib`` directory, and should be extracted to
-``${S}/usr/lib/<library>.so.<version>`` to be installed in :term:`D` correctly.
+The :ref:`ref-classes-bin-package` class is a helper class for recipes that extract the
+contents of a binary package (e.g. an RPM) and install those contents
+rather than building the binary from source. The binary package is
+extracted and new packages in the configured output package format are
+created. Extraction and installation of proprietary binaries is a good
+example use for this class.
 
 .. note::
 
-   The extraction of the package passed in :term:`SRC_URI` is not handled by the
-   :ref:`ref-classes-bin-package` class, but rather by the appropriate
-   :ref:`fetcher <bitbake-user-manual/bitbake-user-manual-fetching:fetchers>`
-   depending on the file extension.
+   For RPMs and other packages that do not contain a subdirectory, you
+   should specify an appropriate fetcher parameter to point to the
+   subdirectory. For example, if BitBake is using the Git fetcher (``git://``),
+   the "subpath" parameter limits the checkout to a specific subpath
+   of the tree. Here is an example where ``${BP}`` is used so that the files
+   are extracted into the subdirectory expected by the default value of
+   :term:`S`::
+
+      SRC_URI = "git://example.com/downloads/somepackage.rpm;branch=main;subpath=${BP}"
+
+   See the ":ref:`bitbake-user-manual/bitbake-user-manual-fetching:fetchers`" section in the BitBake User Manual for
+   more information on supported BitBake Fetchers.
 
 .. _ref-classes-binconfig:
 
@@ -600,7 +552,7 @@ You can also look for vulnerabilities in specific packages by passing
 ``-c cve_check`` to BitBake.
 
 After building the software with Bitbake, CVE check output reports are available in ``tmp/deploy/cve``
-and image specific summaries in ``tmp/deploy/images/*.json`` files.
+and image specific summaries in ``tmp/deploy/images/*.cve`` or ``tmp/deploy/images/*.json`` files.
 
 When building, the CVE checker will emit build time warnings for any detected
 issues which are in the state ``Unpatched``, meaning that CVE issue seems to affect the software component
@@ -650,15 +602,6 @@ and following what happens in other Linux distributions and in the greater open 
 You will find some more details in the
 ":ref:`dev-manual/vulnerabilities:checking for vulnerabilities`"
 section in the Development Tasks Manual.
-
-.. _ref-classes-cython:
-
-``cython``
-==========
-
-The :ref:`ref-classes-cython` class can be used by Python recipes that require
-`Cython <https://cython.org/>`__ as part of their build dependencies
-(:term:`DEPENDS`).
 
 .. _ref-classes-debian:
 
@@ -1048,7 +991,6 @@ This class supports several variables:
 
 -  :term:`INITRD`: Indicates list of filesystem images to
    concatenate and use as an initial RAM disk (initrd) (optional).
-   Can be specified for each ``LABEL``.
 
 -  :term:`ROOTFS`: Indicates a filesystem image to include
    as the root filesystem (optional).
@@ -1062,27 +1004,12 @@ This class supports several variables:
 -  :term:`APPEND`: An override list of append strings for
    each ``LABEL``.
 
--  :term:`GRUB_TITLE`: A custom title for each ``LABEL``. If a label does not
-   have a custom title, the label is used as title for the GRUB menu entry.
-
 -  :term:`GRUB_OPTS`: Additional options to add to the
    configuration (optional). Options are delimited using semi-colon
    characters (``;``).
 
 -  :term:`GRUB_TIMEOUT`: Timeout before executing
    the default ``LABEL`` (optional).
-
-Each ``LABEL`` defined in the :term:`LABELS` variable creates a GRUB boot
-entry, and some variables can be defined individually per ``LABEL``. The label
-specific override names are defined as ``grub_LABEL``.
-
-For example, for a label ``factory``, the override name would be
-``grub_factory``. A custom GRUB menu entry titled "Factory Install" with the
-additional parameter ``factory=yes`` can be achieved as follows::
-
-   LABELS:append = " factory"
-   APPEND:grub_factory = "factory=yes"
-   GRUB_TITLE:grub_factory = "Factory Install"
 
 .. _ref-classes-gsettings:
 
@@ -1534,11 +1461,12 @@ The tests you can list with the :term:`WARN_QA` and
 -  ``patch-fuzz:`` Checks for fuzz in patch files that may allow
    them to apply incorrectly if the underlying code changes.
 
--  ``patch-status:`` Checks that the ``Upstream-Status`` is specified and valid
-   in the headers of patches for recipes.
+-  ``patch-status-core:`` Checks that the Upstream-Status is specified
+   and valid in the headers of patches for recipes in the OE-Core layer.
 
--  ``pep517-backend:`` checks that a recipe inheriting
-   :ref:`ref-classes-setuptools3` has a PEP517-compliant backend.
+-  ``patch-status-noncore:`` Checks that the Upstream-Status is specified
+   and valid in the headers of patches for recipes in layers other than
+   OE-Core.
 
 -  ``perllocalpod:`` Checks for ``perllocal.pod`` being erroneously
    installed and packaged by a recipe.
@@ -1732,158 +1660,77 @@ Its behavior is mainly controlled by the following variables:
 -  :term:`KERNEL_DTC_FLAGS`: flags for ``dtc``, the Device Tree Compiler
 -  :term:`KERNEL_PACKAGE_NAME`: base name of the kernel packages
 
-.. _ref-classes-kernel-fit-image:
+.. _ref-classes-kernel-fitimage:
 
-``kernel-fit-image``
-====================
+``kernel-fitimage``
+===================
 
-The :ref:`ref-classes-kernel-fit-image` class provides support to pack a kernel image,
-device trees, a U-boot script, and an :term:`Initramfs` into a single FIT image.
-In theory, a FIT image can support any number of kernels, U-boot scripts,
-:term:`Initramfs`, and device trees.
-However, :ref:`ref-classes-kernel-fit-image` currently only supports
+The :ref:`ref-classes-kernel-fitimage` class provides support to pack a kernel image,
+device trees, a U-boot script, an :term:`Initramfs` bundle and a RAM disk
+into a single FIT image. In theory, a FIT image can support any number
+of kernels, U-boot scripts, :term:`Initramfs` bundles, RAM disks and device-trees.
+However, :ref:`ref-classes-kernel-fitimage` currently only supports
 limited usecases: just one kernel image, an optional U-boot script,
-an optional :term:`Initramfs`, and any number of device trees.
+an optional :term:`Initramfs` bundle, an optional RAM disk, and any number of
+device trees.
 
-The FIT image is created by a recipe which inherits the
-:ref:`ref-classes-kernel-fit-image` class.
-One such example is the ``linux-yocto-fitimage`` recipe which creates a FIT
-image for the Linux Yocto kernel.
-Additionally, it is required that :term:`KERNEL_CLASSES` is set to include
-:ref:`ref-classes-kernel-fit-extra-artifacts`.
-The :ref:`ref-classes-kernel-fit-extra-artifacts` class exposes the required kernel
-artifacts to the :term:`DEPLOY_DIR_IMAGE` which are used by the
-:ref:`ref-classes-kernel-fit-image` class to create the FIT image.
+To create a FIT image, it is required that :term:`KERNEL_CLASSES`
+is set to include ":ref:`ref-classes-kernel-fitimage`" and one of :term:`KERNEL_IMAGETYPE`,
+:term:`KERNEL_ALT_IMAGETYPE` or :term:`KERNEL_IMAGETYPES` to include "fitImage".
 
-The simplest example for building a FIT image is to add::
+The options for the device tree compiler passed to ``mkimage -D``
+when creating the FIT image are specified using the
+:term:`UBOOT_MKIMAGE_DTCOPTS` variable.
 
-   KERNEL_CLASSES += "kernel-fit-extra-artifacts"
+Only a single kernel can be added to the FIT image created by
+:ref:`ref-classes-kernel-fitimage` and the kernel image in FIT is mandatory. The
+address where the kernel image is to be loaded by U-Boot is
+specified by :term:`UBOOT_LOADADDRESS` and the entrypoint by
+:term:`UBOOT_ENTRYPOINT`. Setting :term:`FIT_ADDRESS_CELLS` to "2"
+is necessary if such addresses are 64 bit ones.
 
-to the machine :term:`configuration file` and to execute::
+Multiple device trees can be added to the FIT image created by
+:ref:`ref-classes-kernel-fitimage` and the device tree is optional.
+The address where the device tree is to be loaded by U-Boot is
+specified by :term:`UBOOT_DTBO_LOADADDRESS` for device tree overlays
+and by :term:`UBOOT_DTB_LOADADDRESS` for device tree binaries.
 
-   bitbake linux-yocto-fitimage
+Only a single RAM disk can be added to the FIT image created by
+:ref:`ref-classes-kernel-fitimage` and the RAM disk in FIT is optional.
+The address where the RAM disk image is to be loaded by U-Boot
+is specified by :term:`UBOOT_RD_LOADADDRESS` and the entrypoint by
+:term:`UBOOT_RD_ENTRYPOINT`. The ramdisk is added to the FIT image when
+:term:`INITRAMFS_IMAGE` is specified and requires that :term:`INITRAMFS_IMAGE_BUNDLE`
+is not set to 1.
 
-This results in a ``fitImage`` file deployed to the :term:`DEPLOY_DIR_IMAGE`
-directory and a ``linux-yocto-fitimage`` package which can be installed.
+Only a single :term:`Initramfs` bundle can be added to the FIT image created by
+:ref:`ref-classes-kernel-fitimage` and the :term:`Initramfs` bundle in FIT is optional.
+In case of :term:`Initramfs`, the kernel is configured to be bundled with the root filesystem
+in the same binary (example: zImage-initramfs-:term:`MACHINE`.bin).
+When the kernel is copied to RAM and executed, it unpacks the :term:`Initramfs` root filesystem.
+The :term:`Initramfs` bundle can be enabled when :term:`INITRAMFS_IMAGE`
+is specified and requires that :term:`INITRAMFS_IMAGE_BUNDLE` is set to 1.
+The address where the :term:`Initramfs` bundle is to be loaded by U-boot is specified
+by :term:`UBOOT_LOADADDRESS` and the entrypoint by :term:`UBOOT_ENTRYPOINT`.
 
-The same approach works for all variants of the ``linux-yocto`` kernel.
-For example, if the ``linux-yocto-rt`` kernel should be used, add the following
-lines to the machine configuration file::
+Only a single U-boot boot script can be added to the FIT image created by
+:ref:`ref-classes-kernel-fitimage` and the boot script is optional.
+The boot script is specified in the ITS file as a text file containing
+U-boot commands. When using a boot script the user should configure the
+U-boot :ref:`ref-tasks-install` task to copy the script to sysroot.
+So the script can be included in the FIT image by the :ref:`ref-classes-kernel-fitimage`
+class. At run-time, U-boot CONFIG_BOOTCOMMAND define can be configured to
+load the boot script from the FIT image and execute it.
 
-   KERNEL_CLASSES += "kernel-fit-extra-artifacts"
-   PREFERRED_PROVIDER_virtual/kernel = "linux-yocto-rt"
+The FIT image generated by the :ref:`ref-classes-kernel-fitimage` class is signed when the
+variables :term:`UBOOT_SIGN_ENABLE`, :term:`UBOOT_MKIMAGE_DTCOPTS`,
+:term:`UBOOT_SIGN_KEYDIR` and :term:`UBOOT_SIGN_KEYNAME` are set
+appropriately. The default values used for :term:`FIT_HASH_ALG` and
+:term:`FIT_SIGN_ALG` in :ref:`ref-classes-kernel-fitimage` are "sha256" and
+"rsa2048" respectively. The keys for signing the FIT image can be generated using
+the :ref:`ref-classes-kernel-fitimage` class when both :term:`FIT_GENERATE_KEYS` and
+:term:`UBOOT_SIGN_ENABLE` are set to "1".
 
-The FIT image, this time including the RT kernel, is built again by calling::
-
-   bitbake linux-yocto-fitimage
-
-For other kernels provided by other layers, the same approach would work.
-However, it is usually more intuitive to add a custom FIT image recipe next to
-the custom kernel recipe.
-For example, if a layer provides a ``linux-vanilla`` recipe, a
-``linux-vanilla-fitimage`` recipe may be added as well.
-The ``linux-vanilla-fitimage`` recipe can be created as a customized copy of
-the ``linux-yocto-fitimage`` recipe.
-
-Usually the kernel is built as a dependency of an image.
-If the FIT image should be used as a replacement for the kernel image which
-is installed in the root filesystem, then the following variables can be set
-e.g. in the machine configuration file::
-
-   # Create and deploy the vmlinux artifact which gets included into the FIT image
-   KERNEL_CLASSES += "kernel-fit-extra-artifacts"
-
-   # Do not install the kernel image package
-   RRECOMMENDS:${KERNEL_PACKAGE_NAME}-base = ""
-   # Install the FIT image package
-   MACHINE_ESSENTIAL_EXTRA_RDEPENDS += "linux-yocto-fitimage"
-
-   # Configure the image.bbclass to depend on the FIT image instead of only
-   # the kernel to ensure the FIT image is built and deployed with the image
-   KERNEL_DEPLOY_DEPEND = "linux-yocto-fitimage:do_deploy"
-
-The :ref:`ref-classes-kernel-fit-image` class processes several variables that
-allow configuration:
-
--  The options for the device tree compiler passed to ``mkimage -D``
-   when creating the FIT image are specified using the
-   :term:`UBOOT_MKIMAGE_DTCOPTS` variable.
-
--  Only a single kernel can be added to the FIT image created by
-   :ref:`ref-classes-kernel-fit-image` and it is a mandatory component of the
-   FIT image.
-   The address where the kernel image is to be loaded by U-Boot is
-   specified by :term:`UBOOT_LOADADDRESS` and the entrypoint by
-   :term:`UBOOT_ENTRYPOINT`. Setting :term:`FIT_ADDRESS_CELLS` to "2"
-   is necessary if such addresses are 64 bit ones.
-
--  Multiple device trees can be added to the FIT image created by
-   :ref:`ref-classes-kernel-fit-image` and the device tree is optional.
-   The address where the device tree is to be loaded by U-Boot is
-   specified by :term:`UBOOT_DTBO_LOADADDRESS` for device tree overlays
-   and by :term:`UBOOT_DTB_LOADADDRESS` for device tree binaries.
-
--  Only a single :term:`Initramfs` can be added to the FIT image created by
-   :ref:`ref-classes-kernel-fit-image`. The :term:`Initramfs` in FIT is optional.
-   The address where the RAM disk image is to be loaded by U-Boot
-   is specified by :term:`UBOOT_RD_LOADADDRESS` and the entrypoint by
-   :term:`UBOOT_RD_ENTRYPOINT`. The :term:`Initramfs` is added to the FIT image
-   when :term:`INITRAMFS_IMAGE` is specified.
-
--  It's recommended to add the :term:`Initramfs` and the kernel image as
-   independent image nodes to the FIT image.
-   Bundling a RAM disk image with the kernel image and including the bundle
-   (:term:`INITRAMFS_IMAGE_BUNDLE` set to "1") in the FIT image is possible.
-   However, this approach has the disadvantage that any change to the RAM
-   disk image necessitates rebuilding the kernel image.
-   This process requires the full kernel build directory, which is kind of
-   incompatible with the :term:`SSTATE_DIR` and, consequently, with SDKs.
-
--  Only a single U-Boot boot script can be added to the FIT image created by
-   :ref:`ref-classes-kernel-fit-image`. The boot script is optional.
-   The boot script is specified in the ITS file as a text file containing
-   U-Boot commands. When using a boot script the recipe which inherits the
-   :ref:`ref-classes-kernel-fit-image` class should add the script to
-   :term:`SRC_URI` and set the :term:`FIT_UBOOT_ENV` variable to the name of the
-   file like the following::
-
-      FIT_UBOOT_ENV = "boot.txt"
-      SRC_URI += "file://${FIT_UBOOT_ENV}"
-
-   At run-time, U-boot's boot command can be configured to load the boot script
-   from the FIT image and source it.
-
--  The FIT image generated by the :ref:`ref-classes-kernel-fit-image` class is signed when the
-   variables :term:`UBOOT_SIGN_ENABLE`, :term:`UBOOT_MKIMAGE_DTCOPTS`,
-   :term:`UBOOT_SIGN_KEYDIR` and :term:`UBOOT_SIGN_KEYNAME` are set
-   appropriately. The default values used for :term:`FIT_HASH_ALG` and
-   :term:`FIT_SIGN_ALG` in :ref:`ref-classes-kernel-fit-image` are "sha256" and
-   "rsa2048" respectively. The keys for signing the FIT image can be generated using
-   the :ref:`ref-classes-kernel-fit-image` class when both :term:`FIT_GENERATE_KEYS` and
-   :term:`UBOOT_SIGN_ENABLE` are set to "1".
-
-.. _ref-classes-kernel-fit-extra-artifacts:
-
-``kernel-fit-extra-artifacts``
-==============================
-
-The :ref:`ref-classes-kernel-fit-extra-artifacts` class exposes the required
-kernel artifacts to the :term:`DEPLOY_DIR_IMAGE` directory.
-These artifacts are used by the :ref:`ref-classes-kernel-fit-image` class to
-create a FIT image that can include the kernel, device trees, an optional
-U-Boot script, and an optional Initramfs.
-
-This class is typically included by adding it to the :term:`KERNEL_CLASSES`
-variable in your kernel recipe or machine configuration when building FIT images.
-It ensures that all necessary files are available for packaging into the FIT image,
-such as the kernel binary, device tree blobs (DTBs), and other related files.
-
-For example, to enable this class, set::
-
-   KERNEL_CLASSES += "kernel-fit-extra-artifacts"
-
-This is required when using the :ref:`ref-classes-kernel-fit-image` class to
-generate FIT images for your kernel.
 
 .. _ref-classes-kernel-grub:
 
@@ -2020,6 +1867,14 @@ each layer before starting every build. The :ref:`ref-classes-metadata_scm`
 class is enabled by default because it is inherited by the
 :ref:`ref-classes-base` class.
 
+.. _ref-classes-migrate_localcount:
+
+``migrate_localcount``
+======================
+
+The :ref:`ref-classes-migrate_localcount` class verifies a recipe's localcount data and
+increments it appropriately.
+
 .. _ref-classes-mime:
 
 ``mime``
@@ -2131,8 +1986,7 @@ a couple different ways:
       Not using this naming convention can lead to subtle problems
       caused by existing code that depends on that naming convention.
 
--  Or, create a :ref:`ref-classes-native` variant of any target recipe (e.g.
-   ``myrecipe.bb``) by adding the following to the recipe::
+-  Create or modify a target recipe that contains the following::
 
       BBCLASSEXTEND = "native"
 
@@ -2163,18 +2017,7 @@ couple different ways:
    inherit statement in the recipe after all other inherit statements so
    that the :ref:`ref-classes-nativesdk` class is inherited last.
 
-   .. note::
-
-      When creating a recipe, you must follow this naming convention::
-
-              nativesdk-myrecipe.bb
-
-
-      Not doing so can lead to subtle problems because there is code that
-      depends on the naming convention.
-
--  Or, create a :ref:`ref-classes-nativesdk` variant of any target recipe (e.g.
-   ``myrecipe.bb``) by adding the following to the recipe::
+-  Create a :ref:`ref-classes-nativesdk` variant of any recipe by adding the following::
 
        BBCLASSEXTEND = "nativesdk"
 
@@ -2182,6 +2025,16 @@ couple different ways:
    recipe, use ``:class-nativesdk`` and ``:class-target`` overrides to
    specify any functionality specific to the respective SDK machine or
    target case.
+
+.. note::
+
+   When creating a recipe, you must follow this naming convention::
+
+           nativesdk-myrecipe.bb
+
+
+   Not doing so can lead to subtle problems because there is code that
+   depends on the naming convention.
 
 Although applied differently, the :ref:`ref-classes-nativesdk` class is used with both
 methods. The advantage of the second method is that you do not need to
@@ -2195,14 +2048,6 @@ and the target. All common parts of the recipe are automatically shared.
 
 Disables packaging tasks for those recipes and classes where packaging
 is not needed.
-
-.. _ref-classes-nospdx:
-
-``nospdx``
-==========
-
-The :ref:`ref-classes-nospdx` allows a recipe to opt out of SPDX
-generation provided by :ref:`ref-classes-create-spdx`.
 
 .. _ref-classes-npm:
 
@@ -2763,7 +2608,7 @@ runtime tests for recipes that build software that provides these tests.
 This class is intended to be inherited by individual recipes. However,
 the class' functionality is largely disabled unless "ptest" appears in
 :term:`DISTRO_FEATURES`. See the
-":ref:`test-manual/ptest:testing packages with ptest`"
+":ref:`dev-manual/packages:testing packages with ptest`"
 section in the Yocto Project Development Tasks Manual for more information
 on ptest.
 
@@ -2787,22 +2632,8 @@ Enables package tests (ptests) specifically for GNOME packages, which
 have tests intended to be executed with ``gnome-desktop-testing``.
 
 For information on setting up and running ptests, see the
-":ref:`test-manual/ptest:testing packages with ptest`"
+":ref:`dev-manual/packages:testing packages with ptest`"
 section in the Yocto Project Development Tasks Manual.
-
-.. _ref-classes-ptest-python-pytest:
-
-``ptest-python-pytest``
-=======================
-
-The :ref:`ref-classes-ptest-python-pytest` class can be inherited in Python-based
-recipes to automatically configure the :ref:`ref-classes-ptest` class for Python
-packages leveraging the `pytest <https://docs.pytest.org>`__ unit test framework.
-
-Within the recipe, the :term:`PTEST_PYTEST_DIR` variable specifies the path to
-the directory containing the tests that will be installed in :term:`D` by the
-:ref:`ref-tasks-install_ptest_base` task, as well as a specific ``run-ptest``
-script for this task.
 
 .. _ref-classes-python3-dir:
 
@@ -2896,23 +2727,6 @@ machine, distro, build system, target system, host distro, branch,
 commit, and log. From the information, report files using a JSON format
 are created and stored in
 ``${``\ :term:`LOG_DIR`\ ``}/error-report``.
-
-.. _ref-classes-retain:
-
-``retain``
-==========
-
-The :ref:`ref-classes-retain` class can be used to create a tarball of the work
-directory for a recipe when one of its tasks fails, or any other nominated
-directories. It is useful in cases where the environment in which builds are run
-is ephemeral or otherwise inaccessible for examination during debugging.
-
-To enable, add the following to your configuration::
-
-   INHERIT += "retain"
-
-The class can be disabled for specific recipes using the :term:`RETAIN_ENABLED`
-variable.
 
 .. _ref-classes-rm-work:
 
@@ -3100,6 +2914,15 @@ in the :ref:`ref-classes-setuptools3` class and inherit this class instead.
 ============
 
 The :ref:`ref-classes-sign_rpm` class supports generating signed RPM packages.
+
+.. _ref-classes-siteconfig:
+
+``siteconfig``
+==============
+
+The :ref:`ref-classes-siteconfig` class provides functionality for handling site
+configuration. The class is used by the :ref:`ref-classes-autotools` class to
+accelerate the :ref:`ref-tasks-configure` task.
 
 .. _ref-classes-siteinfo:
 
@@ -3382,8 +3205,8 @@ after it is built, you can set :term:`TESTIMAGE_AUTO`::
    TESTIMAGE_AUTO = "1"
 
 For information on how to enable, run, and create new tests, see the
-":ref:`test-manual/runtime-testing:performing automated runtime testing`"
-section in the Yocto Project Test Environment Manual.
+":ref:`dev-manual/runtime-testing:performing automated runtime testing`"
+section in the Yocto Project Development Tasks Manual.
 
 .. _ref-classes-testsdk:
 
@@ -3498,79 +3321,14 @@ The variables used by this class are:
 -  :term:`UBOOT_FITIMAGE_ENABLE`: enable the generation of a U-Boot FIT image.
 -  :term:`UBOOT_MKIMAGE_DTCOPTS`: DTC options for U-Boot ``mkimage`` when
    rebuilding the FIT image containing the kernel.
--  :term:`UBOOT_FIT_ARM_TRUSTED_FIRMWARE`: include the Trusted Firmware-A
-   (TF-A) binary in the U-Boot FIT image.
--  :term:`UBOOT_FIT_ARM_TRUSTED_FIRMWARE_IMAGE`: specifies the path to the
-   Trusted Firmware-A (TF-A) binary.
--  :term:`UBOOT_FIT_TEE`: include the Trusted Execution Environment (TEE)
-   binary in the U-Boot FIT image.
--  :term:`UBOOT_FIT_TEE_IMAGE`: specifies the path to the Trusted Execution
-   Environment (TEE) binary.
--  :term:`UBOOT_FIT_USER_SETTINGS`: adds a user-specific snippet to the U-Boot
-   Image Tree Source (ITS). Users can include their custom U-Boot Image Tree
-   Source (ITS) snippet in this variable.
--  :term:`UBOOT_FIT_CONF_FIRMWARE`: adds one image to the ``firmware`` property
-   of the configuration node.
--  :term:`UBOOT_FIT_CONF_USER_LOADABLES`: adds one or more user-defined images
-   to the ``loadables`` property of the configuration node.
 
 See U-Boot's documentation for details about `verified boot
 <https://source.denx.de/u-boot/u-boot/-/blob/master/doc/uImage.FIT/verified-boot.txt>`__
 and the `signature process
 <https://source.denx.de/u-boot/u-boot/-/blob/master/doc/uImage.FIT/signature.txt>`__.
 
-See also the description of :ref:`ref-classes-kernel-fit-image` class, which this class
+See also the description of :ref:`ref-classes-kernel-fitimage` class, which this class
 imitates.
-
-.. _ref-classes-uki:
-
-``uki``
-=======
-
-The :ref:`ref-classes-uki` class provides support for `Unified Kernel Image
-(UKI) <https://uapi-group.org/specifications/specs/unified_kernel_image/>`__
-format. UKIs combine kernel, :term:`Initramfs`, signatures, metadata etc to a
-single UEFI firmware compatible binary. The class is intended to be inherited
-by rootfs image recipes. The build configuration should also use an
-:term:`Initramfs`, ``systemd-boot`` as boot menu provider and have UEFI support
-on target hardware. Using ``systemd`` as init is recommended. Image builds
-should create an ESP partition for UEFI firmware and copy ``systemd-boot`` and
-UKI files there. Sample configuration for Wic images is provided in
-:oe_git:`scripts/lib/wic/canned-wks/efi-uki-bootdisk.wks.in
-</openembedded-core/tree/scripts/lib/wic/canned-wks/efi-uki-bootdisk.wks.in>`.
-UKIs are generated using ``systemd`` reference implementation `ukify
-<https://www.freedesktop.org/software/systemd/man/latest/ukify.html>`__.
-This class uses a number of variables but tries to find sensible defaults for
-them.
-
-The variables used by this class are:
-
--  :term:`EFI_ARCH`: architecture name within EFI standard, set in
-   :oe_git:`meta/conf/image-uefi.conf
-   </openembedded-core/tree/meta/conf/image-uefi.conf>`
--  :term:`IMAGE_EFI_BOOT_FILES`: files to install to EFI boot partition
-   created by the ``bootimg-efi`` Wic plugin
--  :term:`INITRAMFS_IMAGE`: initramfs recipe name
--  :term:`KERNEL_DEVICETREE`: optional devicetree files to embed into UKI
--  :term:`UKIFY_CMD`: `ukify
-   <https://www.freedesktop.org/software/systemd/man/latest/ukify.html>`__
-   command to build the UKI image
--  :term:`UKI_CMDLINE`: kernel command line to use with UKI
--  :term:`UKI_CONFIG_FILE`: optional config file for `ukify
-   <https://www.freedesktop.org/software/systemd/man/latest/ukify.html>`__
--  :term:`UKI_FILENAME`: output file name for the UKI image
--  :term:`UKI_KERNEL_FILENAME`: kernel image file name
--  :term:`UKI_SB_CERT`: optional UEFI secureboot certificate matching the
-   private key
--  :term:`UKI_SB_KEY`: optional UEFI secureboot private key to sign UKI with
-
-For examples on how to use this class see oeqa selftest
-:oe_git:`meta/lib/oeqa/selftest/cases/uki.py
-</openembedded-core/tree/meta/lib/oeqa/selftest/cases/uki.py>`.
-Also an oeqa runtime test :oe_git:`meta/lib/oeqa/runtime/cases/uki.py
-</openembedded-core/tree/meta/lib/oeqa/runtime/cases/uki.py>` is provided which
-verifies that the target system booted the same UKI binary as was set at
-buildtime via :term:`UKI_FILENAME`.
 
 .. _ref-classes-uninative:
 
@@ -3731,31 +3489,6 @@ This class is enabled by default because it is inherited by the
 The :ref:`ref-classes-vala` class supports recipes that need to build software written
 using the Vala programming language.
 
-.. _ref-classes-vex:
-
-``vex``
-========
-
-The :ref:`ref-classes-vex` class is used to generate metadata needed by external
-tools to check for vulnerabilities, for example CVEs. It can be used as a
-replacement for :ref:`ref-classes-cve-check`.
-
-In order to use this class, inherit the class in the ``local.conf`` file and it
-will add the ``generate_vex`` task for every recipe::
-
-   INHERIT += "vex"
-
-If an image is built it will generate a report in :term:`DEPLOY_DIR_IMAGE` for
-all the packages used, it will also generate a file for all recipes used in the
-build.
-
-Variables use the ``CVE_CHECK`` prefix to keep compatibility with the
-:ref:`ref-classes-cve-check` class.
-
-Example usage::
-
-   bitbake -c generate_vex openssl
-
 .. _ref-classes-waf:
 
 ``waf``
@@ -3767,23 +3500,3 @@ the Waf build system. You can use the
 :term:`PACKAGECONFIG_CONFARGS` variables
 to specify additional configuration options to be passed on the Waf
 command line.
-
-.. _ref-classes-yocto-check-layer:
-
-``yocto-check-layer``
-=====================
-
-The :ref:`ref-classes-yocto-check-layer` class is used by the
-:oe_git:`yocto-check-layer </openembedded-core/tree/scripts/yocto-check-layer>`
-script to ensure that packages from Yocto Project Compatible layers don't skip
-required QA checks listed in :term:`CHECKLAYER_REQUIRED_TESTS` defined by the
-:ref:`ref-classes-insane` class.
-
-It adds an anonymous python function with extra processing to all recipes,
-and globally inheriting this class with :term:`INHERIT` is not advised. Instead
-the ``yocto-check-layer`` script should be used as it handles usage of this
-class.
-
-For more information on the Yocto Project
-Compatible layers, see the :ref:`dev-manual/layers:Making Sure Your Layer is
-Compatible With Yocto Project` section of the Yocto Project Development Manual.

@@ -7,8 +7,7 @@ HOMEPAGE = "http://www.pcre.org"
 SECTION = "devel"
 LICENSE = "BSD-3-Clause"
 LIC_FILES_CHKSUM = "file://LICENCE;md5=b5d5d1a69a24ea2718263f1ff85a1c58"
-SOURCEFORGE_PROJECT = "pcre"
-SRC_URI = "${SOURCEFORGE_MIRROR}/${SOURCEFORGE_PROJECT}/pcre-${PV}.tar.bz2 \
+SRC_URI = "${SOURCEFORGE_MIRROR}/pcre/pcre-${PV}.tar.bz2 \
            file://run-ptest \
            file://Makefile \
            "
@@ -17,7 +16,7 @@ SRC_URI[sha256sum] = "4dae6fdcd2bb0bb6c37b5f97c33c2be954da743985369cddac3546e321
 
 CVE_PRODUCT = "pcre"
 
-S = "${UNPACKDIR}/pcre-${PV}"
+S = "${WORKDIR}/pcre-${PV}"
 
 PROVIDES += "pcre"
 DEPENDS += "bzip2 zlib"
@@ -33,7 +32,7 @@ PACKAGECONFIG[jit] = "--enable-jit=auto,--disable-jit"
 
 BINCONFIG = "${bindir}/pcre-config"
 
-inherit autotools binconfig-disabled ptest sourceforge-releases
+inherit autotools binconfig-disabled ptest
 
 EXTRA_OECONF = "--enable-utf"
 
@@ -57,7 +56,7 @@ BBCLASSEXTEND = "native nativesdk"
 
 do_install_ptest() {
 	t=${D}${PTEST_PATH}
-	cp ${UNPACKDIR}/Makefile $t
+	cp ${WORKDIR}/Makefile $t
 	cp -r ${S}/testdata $t
 	for i in pcre_stringpiece_unittest pcregrep pcretest; \
 	  do cp ${B}/.libs/$i $t; \

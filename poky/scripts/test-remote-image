@@ -152,7 +152,8 @@ class AutoTargetProfile(BaseTargetProfile):
         return controller
 
     def set_kernel_file(self):
-        machine = get_bb_var('MACHINE')
+        postconfig = "QA_GET_MACHINE = \"${MACHINE}\""
+        machine = get_bb_var('QA_GET_MACHINE', postconfig=postconfig)
         self.kernel_file = self.kernel_type + '-' + machine + '.bin'
 
     def set_rootfs_file(self):
@@ -214,11 +215,13 @@ class PublicAB(BaseRepoProfile):
     def get_repo_path(self):
         path = '/machines/'
 
-        machine = get_bb_var('MACHINE')
+        postconfig = "QA_GET_MACHINE = \"${MACHINE}\""
+        machine = get_bb_var('QA_GET_MACHINE', postconfig=postconfig)
         if 'qemu' in machine:
             path += 'qemu/'
 
-        distro = get_bb_var('DISTRO')
+        postconfig = "QA_GET_DISTRO = \"${DISTRO}\""
+        distro = get_bb_var('QA_GET_DISTRO', postconfig=postconfig)
         path += distro.replace('poky', machine) + '/'
         return path
 

@@ -1,5 +1,5 @@
 [Unit]
-Description=Overlayfs mount unit {LOWERDIR}
+Description=Overlayfs mount unit
 Requires={CREATE_DIRS_SERVICE}
 After={CREATE_DIRS_SERVICE}
 

@@ -4,7 +4,7 @@ SUMMARY = "tzcode, timezone zoneinfo utils -- zic, zdump, tzselect"
 
 inherit native
 
-EXTRA_OEMAKE += "CC='${CC}'"
+EXTRA_OEMAKE += "cc='${CC}'"
 
 do_install () {
         install -d ${D}${bindir}/

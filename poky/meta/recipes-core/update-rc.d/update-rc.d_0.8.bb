@@ -12,6 +12,8 @@ PV .= "+git"
 
 UPSTREAM_CHECK_COMMITS = "1"
 
+S = "${WORKDIR}/git"
+
 inherit allarch
 
 do_compile() {

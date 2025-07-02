@@ -3,7 +3,7 @@ HOMEPAGE = "https://git.yoctoproject.org/opkg/"
 LICENSE = "MIT"
 PACKAGE_ARCH = "${MACHINE_ARCH}"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 do_compile() {
 	mkdir -p ${S}/${sysconfdir}/opkg/
@@ -18,6 +18,7 @@ do_compile() {
 		priority=$(expr $priority + 5)
 	done
 }
+
 
 do_install () {
 	install -d ${D}${sysconfdir}/opkg

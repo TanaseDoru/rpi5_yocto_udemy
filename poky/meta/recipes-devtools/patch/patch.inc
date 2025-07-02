@@ -6,7 +6,7 @@ SECTION = "utils"
 HOMEPAGE = "http://savannah.gnu.org/projects/patch/"
 
 SRC_URI = "${GNU_MIRROR}/patch/patch-${PV}.tar.gz"
-S = "${UNPACKDIR}/patch-${PV}"
+S = "${WORKDIR}/patch-${PV}"
 
 inherit autotools update-alternatives
 

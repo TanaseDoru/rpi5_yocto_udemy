@@ -102,7 +102,6 @@ class IncompatibleLicensePerImageTests(OESelftestTestCase):
         return """
 IMAGE_INSTALL:append = " bash"
 INCOMPATIBLE_LICENSE:pn-core-image-minimal = "GPL-3.0* LGPL-3.0*"
-MACHINE_ESSENTIAL_EXTRA_RDEPENDS:remove = "tar"
 """
 
     def test_bash_default(self):
@@ -115,7 +114,7 @@ MACHINE_ESSENTIAL_EXTRA_RDEPENDS:remove = "tar"
 
     def test_bash_and_license(self):
         self.disable_class("create-spdx")
-        self.write_config(self.default_config() + '\nLICENSE:append:pn-bash = " & SomeLicense"\nERROR_QA:remove:pn-bash = "license-exists"')
+        self.write_config(self.default_config() + '\nLICENSE:append:pn-bash = " & SomeLicense"')
         error_msg = "ERROR: core-image-minimal-1.0-r0 do_rootfs: Package bash cannot be installed into the image because it has incompatible license(s): GPL-3.0-or-later"
 
         result = bitbake('core-image-minimal', ignore_status=True)
@@ -124,12 +123,12 @@ MACHINE_ESSENTIAL_EXTRA_RDEPENDS:remove = "tar"
 
     def test_bash_or_license(self):
         self.disable_class("create-spdx")
-        self.write_config(self.default_config() + '\nLICENSE:append:pn-bash = " | SomeLicense"\nERROR_QA:remove:pn-bash = "license-exists"\nERROR_QA:remove:pn-core-image-minimal = "license-file-missing"')
+        self.write_config(self.default_config() + '\nLICENSE:append:pn-bash = " | SomeLicense"')
 
         bitbake('core-image-minimal')
 
     def test_bash_license_exceptions(self):
-        self.write_config(self.default_config() + '\nINCOMPATIBLE_LICENSE_EXCEPTIONS:pn-core-image-minimal = "bash:GPL-3.0-or-later"\nERROR_QA:remove:pn-core-image-minimal = "license-exception"')
+        self.write_config(self.default_config() + '\nINCOMPATIBLE_LICENSE_EXCEPTIONS:pn-core-image-minimal = "bash:GPL-3.0-or-later"')
 
         bitbake('core-image-minimal')
 
@@ -137,8 +136,6 @@ class NoGPL3InImagesTests(OESelftestTestCase):
     def test_core_image_minimal(self):
         self.write_config("""
 INCOMPATIBLE_LICENSE:pn-core-image-minimal = "GPL-3.0* LGPL-3.0*"
-
-require conf/distro/include/no-gplv3.inc
 """)
         bitbake('core-image-minimal')
 

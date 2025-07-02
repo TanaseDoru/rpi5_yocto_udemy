@@ -1,8 +1,7 @@
 QA_LOGFILE = "${TMPDIR}/qa.log"
 
 OEINCLUDELOGS ?= "yes"
-# if SERIAL_CONSOLES is set, take the first device entry.  Otherwise use ttyS0 as the default
-KERNEL_CONSOLE ?= "${@','.join(d.getVar('SERIAL_CONSOLES').split(' ')[0].split(';')[::-1]) or 'ttyS0,115200'}"
+KERNEL_CONSOLE ?= "ttyS0"
 KEEPUIMAGE ??= "yes"
 
 DEFAULT_IMAGE_LINGUAS = "en-us en-gb"
@@ -36,7 +35,6 @@ COMMERCIAL_VIDEO_PLUGINS ?= ""
 # COMMERCIAL_VIDEO_PLUGINS ?= "gst-plugins-ugly-mpeg2dec gst-plugins-ugly-mpegstream gst-plugins-bad-mpegvideoparse"
 # Set of common licenses used for license.bbclass
 COMMON_LICENSE_DIR ??= "${COREBASE}/meta/files/common-licenses"
-LICENSE_PATH ??= ""
 
 BB_GENERATE_MIRROR_TARBALLS ??= "0"
 

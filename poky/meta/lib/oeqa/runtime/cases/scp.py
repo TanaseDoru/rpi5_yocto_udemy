@@ -25,7 +25,7 @@ class ScpTest(OERuntimeTestCase):
         os.remove(cls.tmp_path)
 
     @OETestDepends(['ssh.SSHTest.test_ssh'])
-    @OEHasPackage({'openssh-scp', 'openssh-sftp-server'})
+    @OEHasPackage(['openssh-scp'])
     def test_scp_file(self):
         dst = '/tmp/test_scp_file'
 

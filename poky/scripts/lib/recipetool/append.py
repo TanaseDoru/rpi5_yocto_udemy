@@ -101,7 +101,7 @@ def determine_file_source(targetpath, rd):
     import oe.recipeutils
 
     # See if it's in do_install for the recipe
-    unpackdir = rd.getVar('UNPACKDIR')
+    workdir = rd.getVar('WORKDIR')
     src_uri = rd.getVar('SRC_URI')
     srcfile = ''
     modpatches = []
@@ -113,9 +113,9 @@ def determine_file_source(targetpath, rd):
         if not srcpath.startswith('/'):
             # Handle non-absolute path
             srcpath = os.path.abspath(os.path.join(rd.getVarFlag('do_install', 'dirs').split()[-1], srcpath))
-        if srcpath.startswith(unpackdir):
+        if srcpath.startswith(workdir):
             # OK, now we have the source file name, look for it in SRC_URI
-            workdirfile = os.path.relpath(srcpath, unpackdir)
+            workdirfile = os.path.relpath(srcpath, workdir)
             # FIXME this is where we ought to have some code in the fetcher, because this is naive
             for item in src_uri.split():
                 localpath = bb.fetch2.localpath(item, rd)
@@ -317,7 +317,7 @@ def appendsrc(args, files, rd, extralines=None):
     import oe.recipeutils
 
     srcdir = rd.getVar('S')
-    unpackdir = rd.getVar('UNPACKDIR')
+    workdir = rd.getVar('WORKDIR')
 
     import bb.fetch
     simplified = {}
@@ -336,10 +336,10 @@ def appendsrc(args, files, rd, extralines=None):
         src_destdir = os.path.dirname(srcfile)
         if not args.use_workdir:
             if rd.getVar('S') == rd.getVar('STAGING_KERNEL_DIR'):
-                srcdir = os.path.join(unpackdir, rd.getVar('BB_GIT_DEFAULT_DESTSUFFIX'))
+                srcdir = os.path.join(workdir, 'git')
                 if not bb.data.inherits_class('kernel-yocto', rd):
-                    logger.warning('S == STAGING_KERNEL_DIR and non-kernel-yocto, unable to determine path to srcdir, defaulting to ${UNPACKDIR}/${BB_GIT_DEFAULT_DESTSUFFIX}')
-            src_destdir = os.path.join(os.path.relpath(srcdir, unpackdir), src_destdir)
+                    logger.warning('S == STAGING_KERNEL_DIR and non-kernel-yocto, unable to determine path to srcdir, defaulting to ${WORKDIR}/git')
+            src_destdir = os.path.join(os.path.relpath(srcdir, workdir), src_destdir)
         src_destdir = os.path.normpath(src_destdir)
 
         if src_destdir and src_destdir != '.':

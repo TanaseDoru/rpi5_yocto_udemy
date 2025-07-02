@@ -136,7 +136,6 @@ compliant boards with preinstalled firmware.
 The genericarm64 MACHINE is currently tested on the following platforms:
 
   * Texas Instruments BeaglePlay
-  * AMD Kria KV260
 
 The images built are EFI bootable disk images and can be written directly to a
 SD card for booting, for example.
@@ -146,9 +145,6 @@ building the image also build the `u-boot` recipe to build the required
 firmware (note that this firmware will _not_ boot on real hardware), then use
 `runqemu` as usual.
 
-Maintainers:
-* Ross Burton <Ross.Burton@arm.com>
-* Mikko Rapeli <mikko.rapeli@linaro.org>
 
 Texas Instruments Beaglebone (beaglebone-yocto)
 -----------------------------------------------

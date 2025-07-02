@@ -200,3 +200,7 @@ def create_manifest(d, final_manifest=False, manifest_dir=None,
         manifest.create_final()
     else:
         manifest.create_initial()
+
+
+if __name__ == "__main__":
+    pass

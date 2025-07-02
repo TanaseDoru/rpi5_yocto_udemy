@@ -11,7 +11,7 @@
 
 FROM alpine:3.13.1
 
-RUN apk add --no-cache python3 libgcc
+RUN apk add --no-cache python3
 
 COPY bin/bitbake-hashserv /opt/bbhashserv/bin/
 COPY lib/hashserv /opt/bbhashserv/lib/hashserv/

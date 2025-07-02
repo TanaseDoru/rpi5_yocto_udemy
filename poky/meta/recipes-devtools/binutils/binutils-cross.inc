@@ -1,4 +1,5 @@
 inherit cross
+PROVIDES = "virtual/${TARGET_PREFIX}binutils"
 
 PN = "binutils-cross-${TARGET_ARCH}"
 BPN = "binutils"
@@ -8,8 +9,6 @@ TARGET_ARCH[vardepvalue] = "${TARGET_ARCH}"
 
 INHIBIT_DEFAULT_DEPS = "1"
 INHIBIT_AUTOTOOLS_DEPS = "1"
-
-TOOLCHAIN = "gcc"
 
 SRC_URI += "file://0002-binutils-cross-Do-not-generate-linker-script-directo.patch"
 

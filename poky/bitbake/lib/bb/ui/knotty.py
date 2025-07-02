@@ -24,12 +24,6 @@ import atexit
 from itertools import groupby
 
 from bb.ui import uihelper
-import bb.build
-import bb.command
-import bb.cooker
-import bb.event
-import bb.runqueue
-import bb.utils
 
 featureSet = [bb.cooker.CookerFeatures.SEND_SANITYEVENTS, bb.cooker.CookerFeatures.BASEDATASTORE_TRACKING]
 
@@ -109,7 +103,7 @@ def new_progress(msg, maxval):
         return NonInteractiveProgress(msg, maxval)
 
 def pluralise(singular, plural, qty):
-    if qty == 1:
+    if(qty == 1):
         return singular % qty
     else:
         return plural % qty
@@ -118,7 +112,6 @@ def pluralise(singular, plural, qty):
 class InteractConsoleLogFilter(logging.Filter):
     def __init__(self, tf):
         self.tf = tf
-        super().__init__()
 
     def filter(self, record):
         if record.levelno == bb.msg.BBLogFormatter.NOTE and (record.msg.startswith("Running") or record.msg.startswith("recipe ")):
@@ -353,7 +346,7 @@ def print_event_log(event, includelogs, loglines, termfilter):
         termfilter.clearFooter()
         bb.error("Logfile of failure stored in: %s" % logfile)
         if includelogs and not event.errprinted:
-            bb.plain("Log data follows:")
+            print("Log data follows:")
             f = open(logfile, "r")
             lines = []
             while True:
@@ -366,11 +359,11 @@ def print_event_log(event, includelogs, loglines, termfilter):
                     if len(lines) > int(loglines):
                         lines.pop(0)
                 else:
-                    bb.plain('| %s' % l)
+                    print('| %s' % l)
             f.close()
             if lines:
                 for line in lines:
-                    bb.plain(line)
+                    print(line)
 
 def _log_settings_from_server(server, observe_only):
     # Get values of variables which control our output
@@ -562,23 +555,13 @@ def main(server, eventHandler, params, tf = TerminalFilter):
                 }
             })
 
-        consolelogdirname = os.path.dirname(consolelogfile)
-        # `bb.utils.mkdirhier` has this check, but it reports failure using bb.fatal, which logs
-        # to the very logger we are trying to set up.
-        if '${' in str(consolelogdirname):
-            print(
-                "FATAL: Directory name {} contains unexpanded bitbake variable. This may cause build failures and WORKDIR pollution.".format(
-                    consolelogdirname))
-            if '${MACHINE}' in consolelogdirname:
-                print("HINT: It looks like you forgot to set MACHINE in local.conf.")
-
-        bb.utils.mkdirhier(consolelogdirname)
-        loglink = os.path.join(consolelogdirname, 'console-latest.log')
+        bb.utils.mkdirhier(os.path.dirname(consolelogfile))
+        loglink = os.path.join(os.path.dirname(consolelogfile), 'console-latest.log')
         bb.utils.remove(loglink)
         try:
-            os.symlink(os.path.basename(consolelogfile), loglink)
+           os.symlink(os.path.basename(consolelogfile), loglink)
         except OSError:
-            pass
+           pass
 
     # Add the logging domains specified by the user on the command line
     for (domainarg, iterator) in groupby(params.debug_domains):
@@ -593,8 +576,6 @@ def main(server, eventHandler, params, tf = TerminalFilter):
         log_exec_tty = True
     else:
         log_exec_tty = False
-
-    should_print_hyperlinks = sys.stdout.isatty() and os.environ.get('NO_COLOR', '') == ''
 
     helper = uihelper.BBUIHelper()
 
@@ -659,7 +640,7 @@ def main(server, eventHandler, params, tf = TerminalFilter):
     return_value = 0
     errors = 0
     warnings = 0
-    taskfailures = {}
+    taskfailures = []
 
     printintervaldelta = 10 * 60 # 10 minutes
     printinterval = printintervaldelta
@@ -745,8 +726,6 @@ def main(server, eventHandler, params, tf = TerminalFilter):
             if isinstance(event, bb.build.TaskFailed):
                 return_value = 1
                 print_event_log(event, includelogs, loglines, termfilter)
-                k = "{}:{}".format(event._fn, event._task)
-                taskfailures[k] = event.logfile
             if isinstance(event, bb.build.TaskBase):
                 logger.info(event._message)
                 continue
@@ -842,7 +821,7 @@ def main(server, eventHandler, params, tf = TerminalFilter):
 
             if isinstance(event, bb.runqueue.runQueueTaskFailed):
                 return_value = 1
-                taskfailures.setdefault(event.taskstring)
+                taskfailures.append(event.taskstring)
                 logger.error(str(event))
                 continue
 
@@ -963,21 +942,11 @@ def main(server, eventHandler, params, tf = TerminalFilter):
     try:
         termfilter.clearFooter()
         summary = ""
-        def format_hyperlink(url, link_text):
-            if should_print_hyperlinks:
-                start = f'\033]8;;{url}\033\\'
-                end = '\033]8;;\033\\'
-                return f'{start}{link_text}{end}'
-            return link_text
-
         if taskfailures:
             summary += pluralise("\nSummary: %s task failed:",
                                  "\nSummary: %s tasks failed:", len(taskfailures))
-            for (failure, log_file) in taskfailures.items():
+            for failure in taskfailures:
                 summary += "\n  %s" % failure
-                if log_file:
-                    hyperlink = format_hyperlink(f"file://{log_file}", log_file)
-                    summary += "\n    log: {}".format(hyperlink)
         if warnings:
             summary += pluralise("\nSummary: There was %s WARNING message.",
                                  "\nSummary: There were %s WARNING messages.", warnings)

@@ -2,7 +2,6 @@ DUMMYARCH = "buildtools-dummy-${SDKPKGSUFFIX}"
 
 DUMMYPROVIDES_PACKAGES = "\
     nativesdk-perl \
-    nativesdk-perl-dev \
     nativesdk-libxml-parser-perl \
     nativesdk-perl-module-bytes \
     nativesdk-perl-module-carp \
@@ -10,7 +9,6 @@ DUMMYPROVIDES_PACKAGES = "\
     nativesdk-perl-module-data-dumper \
     nativesdk-perl-module-errno \
     nativesdk-perl-module-exporter \
-    nativesdk-perl-module-feature \
     nativesdk-perl-module-file-basename \
     nativesdk-perl-module-file-compare \
     nativesdk-perl-module-file-copy \
@@ -18,18 +16,15 @@ DUMMYPROVIDES_PACKAGES = "\
     nativesdk-perl-module-file-glob \
     nativesdk-perl-module-file-path \
     nativesdk-perl-module-file-spec \
-    nativesdk-perl-module-file-spec-unix \
     nativesdk-perl-module-file-stat \
     nativesdk-perl-module-file-temp \
     nativesdk-perl-module-getopt-long \
-    nativesdk-perl-module-integer \
     nativesdk-perl-module-io-file \
     nativesdk-perl-module-list-util \
     nativesdk-perl-module-overloading \
     nativesdk-perl-module-posix \
     nativesdk-perl-module-scalar-util \
     nativesdk-perl-module-strict \
-    nativesdk-perl-module-symbol \
     nativesdk-perl-module-text-parsewords \
     nativesdk-perl-module-thread-queue \
     nativesdk-perl-module-threads \
@@ -40,6 +35,7 @@ DUMMYPROVIDES_PACKAGES = "\
 DUMMYPROVIDES = "\
     /usr/bin/perl \
     "
+
 
 require dummy-sdk-package.inc
 

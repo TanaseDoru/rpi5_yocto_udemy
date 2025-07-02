@@ -4,6 +4,5 @@ LICENSE = "MIT"
 
 IMAGE_FSTYPES = "container"
 IMAGE_LINGUAS = ""
-IMAGE_FEATURES = ""
 
 inherit core-image

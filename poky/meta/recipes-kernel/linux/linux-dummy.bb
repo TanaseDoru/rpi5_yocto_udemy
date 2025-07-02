@@ -23,13 +23,14 @@ FILES:kernel-vmlinux = ""
 ALLOW_EMPTY:kernel-vmlinux = "1"
 DESCRIPTION:kernel-vmlinux = "Kernel vmlinux meta package"
 
+
 INHIBIT_DEFAULT_DEPS = "1"
 
 COMPATIBLE_HOST = ".*-linux"
 
-SRC_URI = "file://COPYING.GPL"
 
-S = "${UNPACKDIR}"
+SRC_URI = "file://COPYING.GPL"
+S = "${WORKDIR}"
 
 do_configure() {
 	:

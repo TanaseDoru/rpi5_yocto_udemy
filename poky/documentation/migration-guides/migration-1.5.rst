@@ -248,8 +248,8 @@ A new automated image testing framework has been added through the
 framework replaces the older ``imagetest-qemu`` framework.
 
 You can learn more about performing automated image tests in the
-":ref:`test-manual/runtime-testing:performing automated runtime testing`"
-section in the Yocto Project Test Environment Manual.
+":ref:`dev-manual/runtime-testing:performing automated runtime testing`"
+section in the Yocto Project Development Tasks Manual.
 
 .. _migration-1.5-build-history:
 

@@ -14,14 +14,8 @@ fi
 unset CC CXX CPP LD AR NM STRIP
 
 case "$1" in
-setup|configure|dist|install|introspect|init|test|wrap|subprojects|rewrite|compile|devenv|env2mfile|help)
-    MESON_CMD="$1"
-    shift
-    ;;
-*)
-    MESON_CMD=setup
-    echo meson-wrapper: Implicit setup command assumed
-    ;;
+setup|configure|dist|install|introspect|init|test|wrap|subprojects|rewrite|compile|devenv|env2mfile|help) MESON_CMD="$1" ;;
+*) echo meson-wrapper: Implicit setup command assumed; MESON_CMD=setup ;;
 esac
 
 if [ "$MESON_CMD" = "setup" ]; then
@@ -33,6 +27,5 @@ if [ "$MESON_CMD" = "setup" ]; then
 fi
 
 exec "$OECORE_NATIVE_SYSROOT/usr/bin/meson.real" \
-    $MESON_CMD \
-    $MESON_SETUP_OPTS \
-    "$@"
+    "$@" \
+    $MESON_SETUP_OPTS

@@ -17,7 +17,6 @@ EXTRA_OECONF_PATHS = "\
 EXTRA_OECONF:append:linuxstdbase = " --enable-clocale=gnu"
 EXTRA_OECONF:append = " --cache-file=${B}/config.cache"
 EXTRA_OECONF:append:libc-newlib = " --with-newlib --with-target-subdir"
-EXTRA_OECONF:append:libc-picolibc = " --with-newlib --with-target-subdir"
 EXTRA_OECONF:append:libc-baremetal = " --with-target-subdir"
 
 # Disable ifuncs for libatomic on arm conflicts -march/-mcpu
@@ -28,7 +27,6 @@ DISABLE_STATIC:class-nativesdk ?= ""
 
 # Newlib does not support symbol versioning on libsdtcc++
 SYMVERS_CONF:libc-newlib = ""
-SYMVERS_CONF:libc-picolibc = ""
 
 # Building with thumb enabled on armv6t fails
 ARM_INSTRUCTION_SET:armv6 = "arm"
@@ -45,11 +43,10 @@ RUNTIMELIBSSP ?= ""
 RUNTIMELIBSSP:mingw32 ?= "libssp"
 
 RUNTIMETARGET = "${RUNTIMELIBSSP} libstdc++-v3 libgomp libatomic ${RUNTIMELIBITM} \
-    ${@bb.utils.contains('FORTRAN', ',fortran', 'libquadmath', '', d)} \
+    ${@bb.utils.contains_any('FORTRAN', [',fortran',',f77'], 'libquadmath', '', d)} \
 "
 # Only build libstdc++ for newlib
 RUNTIMETARGET:libc-newlib = "libstdc++-v3"
-RUNTIMETARGET:libc-picolibc = "libstdc++-v3"
 
 # libiberty
 # libgfortran needs separate recipe due to libquadmath dependency
@@ -95,7 +92,7 @@ do_install () {
 		mv ${D}${libdir}/gcc/${TARGET_SYS}/${BINV}/include/* ${D}${libdir}/${TARGET_SYS}/${BINV}/include
 		rmdir --ignore-fail-on-non-empty -p ${D}${libdir}/gcc/${TARGET_SYS}/${BINV}/include
 	fi
-	rm -rf ${D}${infodir}/libgomp.info* ${D}${infodir}/dir
+	rm -rf ${D}${infodir}/libgomp.info ${D}${infodir}/dir
 	rm -rf ${D}${infodir}/libitm.info ${D}${infodir}/dir
 	rm -rf ${D}${infodir}/libquadmath.info ${D}${infodir}/dir
 	if [ -d ${D}${libdir}/gcc/${TARGET_SYS}/${BINV}/finclude ]; then
@@ -144,11 +141,6 @@ do_install:append:class-target () {
 		ln -sf ../${X86ARCH32}${TARGET_VENDOR}-${TARGET_OS} ${D}${includedir}/c++/${BINV}/${TARGET_ARCH}${TARGET_VENDOR}-${TARGET_OS}/32
 	fi
 
-	if [ "${TARGET_ARCH}" = "riscv32" -o "${TARGET_ARCH}" = "riscv64" ] && [ -z "${MULTILIB_VARIANTS}" ]; then
-		mv ${D}${includedir}/c++/${BINV}/${TARGET_SYS}/bits/* ${D}${includedir}/c++/${BINV}/bits
-		mv ${D}${includedir}/c++/${BINV}/${TARGET_SYS}/ext/* ${D}${includedir}/c++/${BINV}/ext
-	fi
-
 	if [ "${TCLIBC}" != "glibc" ]; then
 		case "${TARGET_OS}" in
 			"linux-musl" | "linux-*spe") extra_target_os="linux";;
@@ -161,9 +153,8 @@ do_install:append:class-target () {
 }
 
 INHIBIT_DEFAULT_DEPS = "1"
-DEPENDS = "virtual/cross-cc virtual/cross-c++ ${MLPREFIX}libgcc virtual/${MLPREFIX}libc"
-DEPENDS:class-nativesdk = "virtual/nativesdk-cross-cc virtual/nativesdk-cross-c++ ${MLPREFIX}libgcc virtual/${MLPREFIX}libc"
-PROVIDES = "virtual/${MLPREFIX}compilerlibs"
+DEPENDS = "virtual/${TARGET_PREFIX}gcc virtual/${TARGET_PREFIX}g++ libgcc virtual/${MLPREFIX}libc"
+PROVIDES = "virtual/${TARGET_PREFIX}compilerlibs"
 
 BBCLASSEXTEND = "nativesdk"
 
@@ -173,6 +164,8 @@ PACKAGES = "\
     libstdc++-precompile-dev \
     libstdc++-dev \
     libstdc++-staticdev \
+    libg2c \
+    libg2c-dev \
     libssp \
     libssp-dev \
     libssp-staticdev \
@@ -203,6 +196,15 @@ FILES:${PN}-dbg += "\
 # So it needs to be added manually to images sadly.
 # RDEPENDS:${PN}-dbg += "python3-datetime"
 
+FILES:libg2c = "${target_libdir}/libg2c.so.*"
+SUMMARY:libg2c = "Companion runtime library for g77"
+FILES:libg2c-dev = "\
+    ${libdir}/libg2c.so \
+    ${libdir}/libg2c.a \
+    ${libdir}/libfrtbegin.a \
+"
+SUMMARY:libg2c-dev = "Companion runtime library for g77 - development files"
+
 FILES:libstdc++ = "${libdir}/libstdc++.so.*"
 SUMMARY:libstdc++ = "GNU standard C++ library"
 FILES:libstdc++-dev = "\
@@ -210,7 +212,6 @@ FILES:libstdc++-dev = "\
     ${libdir}/libstdc++.so \
     ${libdir}/libstdc++*.la \
     ${libdir}/libsupc++.la \
-    ${libdir}/libstdc++.modules.json \
 "
 SUMMARY:libstdc++-dev = "GNU standard C++ library - development files"
 FILES:libstdc++-staticdev = "\
@@ -299,7 +300,6 @@ do_check[prefuncs] += "extend_recipe_sysroot"
 do_check[prefuncs] += "check_prepare"
 do_check[dirs] = "${WORKDIR}/dejagnu ${B}"
 do_check[nostamp] = "1"
-do_check[network] = "1"
 do_check() {
     export DEJAGNU="${WORKDIR}/dejagnu/site.exp"
 

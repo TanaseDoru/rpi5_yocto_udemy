@@ -73,7 +73,8 @@ class SSH(FetchMethod):
         path = m.group('path')
         path = urllib.parse.unquote(path)
         host = m.group('host')
-        urldata.localfile = os.path.basename(os.path.normpath(path))
+        urldata.localpath = os.path.join(d.getVar('DL_DIR'),
+                os.path.basename(os.path.normpath(path)))
 
     def download(self, urldata, d):
         dldir = d.getVar('DL_DIR')

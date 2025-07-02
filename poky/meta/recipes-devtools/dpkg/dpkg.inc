@@ -11,7 +11,7 @@ RDEPENDS:${PN}:class-native = ""
 
 UPSTREAM_CHECK_GITTAGREGEX = "(?P<pver>(\d+(\.\d+)+))"
 
-inherit autotools gettext perlnative pkgconfig perl-version update-alternatives bash-completion
+inherit autotools gettext perlnative pkgconfig perl-version update-alternatives
 
 PERL:class-native = "${STAGING_BINDIR_NATIVE}/perl-native/perl"
 
@@ -33,6 +33,7 @@ EXTRA_OECONF:append:class-nativesdk = " --disable-update-alternatives DEB_HOST_A
 PACKAGECONFIG = "liblzma"
 PACKAGECONFIG[liblzma] = "--with-liblzma,--without-liblzma, xz"
 
+
 #autotools.bbclass default AUTOTOOLS_AUXDIR is ${S}, we need to under ${S}/build-aux
 AUTOTOOLS_AUXDIR = "${S}/build-aux"
 
@@ -42,8 +43,6 @@ do_configure:prepend () {
         # update dselect/po and scripts/po
         cp -f ${STAGING_DATADIR_NATIVE}/gettext/po/Makefile.in.in ${S}/dselect/po/
         cp -f ${STAGING_DATADIR_NATIVE}/gettext/po/Makefile.in.in ${S}/scripts/po/
-
-        [ ! -e ${S}/.dist-version ] && echo ${PV} > ${S}/.dist-version
 }
 
 do_install:append () {

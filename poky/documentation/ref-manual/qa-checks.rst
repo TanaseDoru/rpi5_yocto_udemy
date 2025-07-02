@@ -752,17 +752,21 @@ Errors and Warnings
 
 .. _qa-check-patch-status:
 
-- ``Missing Upstream-Status in patch <patchfile> Please add according to <url> [patch-status]``
+- ``Missing Upstream-Status in patch <patchfile> Please add according to <url> [patch-status-core/patch-status-noncore]``
 
     The ``Upstream-Status`` value is missing in the specified patch file's header.
     This value is intended to track whether or not the patch has been sent
     upstream, whether or not it has been merged, etc.
 
+    There are two options for this same check - ``patch-status-core`` (for
+    recipes in OE-Core) and ``patch-status-noncore`` (for recipes in any other
+    layer).
+
     For more information, see the
     ":ref:`contributor-guide/recipe-style-guide:patch upstream status`"
     section in the Yocto Project and OpenEmbedded Contributor Guide.
 
-- ``Malformed Upstream-Status in patch <patchfile> Please correct according to <url> [patch-status]``
+- ``Malformed Upstream-Status in patch <patchfile> Please correct according to <url> [patch-status-core/patch-status-noncore]``
 
     The ``Upstream-Status`` value in the specified patch file's header is invalid -
     it must be a specific format. See the "Missing Upstream-Status" entry above
@@ -791,7 +795,7 @@ Errors and Warnings
 
     This check will detect if the source of the package contains some
     upstream-provided tests and, if so, that ptests are implemented for this
-    recipe.  See the ":ref:`test-manual/ptest:testing packages with ptest`"
+    recipe.  See the ":ref:`dev-manual/packages:testing packages with ptest`"
     section in the Yocto Project Development Tasks Manual. See also the
     ":ref:`ref-classes-ptest`" section.
 

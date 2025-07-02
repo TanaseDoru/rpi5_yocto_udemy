@@ -5,10 +5,11 @@ DEPENDS = "virtual/kernel"
 RDEPENDS:${PN} = "udev udev-extraconf"
 SRC_URI = "file://init-live.sh"
 
-S = "${UNPACKDIR}"
+
+S = "${WORKDIR}"
 
 do_install() {
-        install -m 0755 ${S}/init-live.sh ${D}/init
+        install -m 0755 ${WORKDIR}/init-live.sh ${D}/init
         install -d ${D}/dev
         mknod -m 622 ${D}/dev/console c 5 1
 }

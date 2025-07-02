@@ -7,12 +7,13 @@ LIC_FILES_CHKSUM = "file://login.defs_shadow-sysroot;endline=1;md5=ceddfb61608e4
 
 DEPENDS = "base-passwd"
 
+
 # The sole purpose of this recipe is to provide the /etc/login.defs
 # file for the target sysroot - needed so the shadow-native utilities
 # can add custom users/groups for recipes that use inherit useradd.
 SRC_URI = "file://login.defs_shadow-sysroot"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 do_install() {
 	install -d ${D}${sysconfdir}

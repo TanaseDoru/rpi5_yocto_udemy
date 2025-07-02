@@ -2,9 +2,10 @@ SUMMARY = "Enhances systemd compatilibity with existing SysVinit scripts"
 HOMEPAGE = "http://www.freedesktop.org/wiki/Software/systemd"
 LICENSE = "MIT"
 
+
 PACKAGE_WRITE_DEPS += "systemd-systemctl-native"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 inherit features_check
 
@@ -24,7 +25,7 @@ SYSTEMD_DISABLED_SYSV_SERVICES = " \
   syslog.busybox \
 "
 
-pkg_postinst_ontarget:${PN} () {
+pkg_postinst:${PN} () {
 
 	test -d $D${sysconfdir}/init.d  ||  exit 0
 	cd $D${sysconfdir}/init.d

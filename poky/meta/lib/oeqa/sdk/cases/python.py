@@ -4,6 +4,7 @@
 # SPDX-License-Identifier: MIT
 #
 
+import subprocess, unittest
 from oeqa.sdk.case import OESDKTestCase
 
 from oeqa.utils.subprocesstweak import errors_have_output
@@ -11,7 +12,9 @@ errors_have_output()
 
 class Python3Test(OESDKTestCase):
     def setUp(self):
-        self.ensure_host_package("python3-core", recipe="python3")
+        if not (self.tc.hasHostPackage("nativesdk-python3-core") or
+                self.tc.hasHostPackage("python3-core-native")):
+            raise unittest.SkipTest("No python3 package in the SDK")
 
     def test_python3(self):
         cmd = "python3 -c \"import codecs; print(codecs.encode('Uryyb, jbeyq', 'rot13'))\""

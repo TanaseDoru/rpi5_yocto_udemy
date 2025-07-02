@@ -48,8 +48,5 @@ else
     echo "PREINIT: Mounting </data> failed!"
 fi
 
-umount /sys
-umount /proc
-
 echo "PREINIT: done; starting </sbin/init>"
 exec {SBIN_INIT_NAME}

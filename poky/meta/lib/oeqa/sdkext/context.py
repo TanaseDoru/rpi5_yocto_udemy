@@ -12,11 +12,11 @@ class OESDKExtTestContext(OESDKTestContext):
 
     # FIXME - We really need to do better mapping of names here, this at
     # least allows some tests to run
-    def hasHostPackage(self, pkg, regex=False):
+    def hasHostPackage(self, pkg):
         # We force a toolchain to be installed into the eSDK even if its minimal
         if pkg.startswith("packagegroup-cross-canadian-"):
             return True
-        return self._hasPackage(self.host_pkg_manifest, pkg, regex)
+        return self._hasPackage(self.host_pkg_manifest, pkg)
 
 class OESDKExtTestContextExecutor(OESDKTestContextExecutor):
     _context_class = OESDKExtTestContext

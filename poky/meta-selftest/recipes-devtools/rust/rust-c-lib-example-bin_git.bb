@@ -8,6 +8,7 @@ SRC_URI = " \
 "
 
 SRCREV = "fc53c457f69aa5221ec1f8619a007e8150db5e60"
+S = "${WORKDIR}/git"
 
 DEPENDS = "rust-c-lib-example"
 

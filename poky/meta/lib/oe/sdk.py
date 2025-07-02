@@ -148,11 +148,13 @@ def get_extra_sdkinfo(sstate_dir):
     extra_info['filesizes'] = {}
     for root, _, files in os.walk(sstate_dir):
         for fn in files:
-            # Note that this makes an assumption about the sstate filenames
-            if '.tar.' in fn and not fn.endswith('.siginfo'):
+            if fn.endswith('.tgz'):
                 fsize = int(math.ceil(float(os.path.getsize(os.path.join(root, fn))) / 1024))
                 task = fn.rsplit(':',1)[1].split('_',1)[1].split(',')[0]
                 origtotal = extra_info['tasksizes'].get(task, 0)
                 extra_info['tasksizes'][task] = origtotal + fsize
                 extra_info['filesizes'][fn] = fsize
     return extra_info
+
+if __name__ == "__main__":
+    pass

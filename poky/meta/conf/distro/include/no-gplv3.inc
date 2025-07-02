@@ -28,5 +28,3 @@ CORE_IMAGE_BASE_INSTALL:remove:pn-core-image-weston = "matchbox-terminal"
 # Some python-tests use bash outside of ptest
 RDEPENDS:${PN}-tests:remove:class-target:pn-python3 = "${MLPREFIX}bash"
 INSANE_SKIP:${PN}-tests:pn-python3 = "file-rdeps"
-
-MACHINE_ESSENTIAL_EXTRA_RDEPENDS:remove = "tar"

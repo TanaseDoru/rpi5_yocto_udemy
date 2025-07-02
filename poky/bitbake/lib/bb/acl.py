@@ -195,6 +195,8 @@ class ACL(object):
 
 def main():
     import argparse
+    import pwd
+    import grp
     from pathlib import Path
 
     parser = argparse.ArgumentParser()

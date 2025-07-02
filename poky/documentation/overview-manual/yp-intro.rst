@@ -47,12 +47,10 @@ Here are features and advantages of the Yocto Project:
    see the "COMMUNITY" and "ECOSYSTEM" tabs on the
    :yocto_home:`Yocto Project <>` home page.
 
--  *Architecture Agnostic:* Yocto Project supports Intel, ARM, MIPS, AMD, PPC,
-   RISC-V and other architectures. Most ODMs, OSVs, and chip vendors create and
-   supply BSPs that support their hardware. If you have custom silicon, you can
-   create a BSP that supports that architecture. See
-   :doc:`/ref-manual/yocto-project-supported-features` for details on the level
-   of support for some of these architectures.
+-  *Architecture Agnostic:* Yocto Project supports Intel, ARM, MIPS,
+   AMD, PPC and other architectures. Most ODMs, OSVs, and chip vendors
+   create and supply BSPs that support their hardware. If you have
+   custom silicon, you can create a BSP that supports that architecture.
 
    Aside from broad architecture support, the Yocto Project fully
    supports a wide range of devices emulated by the Quick EMUlator
@@ -402,7 +400,7 @@ Yocto Project:
    Autobuilder :doc:`here </test-manual/understand-autobuilder>`.
 
 -  *Pseudo:* Pseudo is the Yocto Project implementation of
-   :manpage:`fakeroot <fakeroot(1)>`, which is used to run
+   `fakeroot <http://man.he.net/man1/fakeroot>`__, which is used to run
    commands in an environment that seemingly has root privileges.
 
    During a build, it can be necessary to perform operations that

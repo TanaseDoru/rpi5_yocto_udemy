@@ -3,13 +3,28 @@ DESCRIPTION = "Document type definitions for verification of XML data \
 files against the DocBook rule set."
 HOMEPAGE = "https://docbook.org"
 
-LICENSE = "DocBook"
-NO_GENERIC_LICENSE[DocBook] = "LICENSE-OASIS"
+# The upstream sources are not distributed with a license file.
+# LICENSE-OASIS is included as a "patch" to workaround this. When
+# upgrading this recipe, please verify whether this is still needed.
 
-LIC_FILES_CHKSUM = "file://docbook-4.5/docbookx.dtd;beginline=15;endline=30;md5=ab12da76ad94a41d04e1587693ebd9b6 \
-                    file://LICENSE-OASIS;md5=b9ee6208caa6e66c68dfad6f31d73f92"
+LICENSE = "OASIS"
+LIC_FILES_CHKSUM = "file://${WORKDIR}/LICENSE-OASIS;md5=c608985dd5f7f215e669e7639a0b1d2e"
 
-# Install the latest 4.5 DTDs, and the previous releases for backward compatibility.
+# To support apps with xml schema backward compatibility, we must
+# install a set of schemas. Install the latest based on PV and then
+# name any specific versions as required. TODO: Figure out a mechanism
+# to filter exactly which versions are necessary, if that's even
+# possible.
+#
+# DocBook.org lists available release packages at https://docbook.org/xml/.
+#
+# The release packages relate docbook source at
+# https://github.com/docbook/docbook but building them requires the
+# Gradle build system. In future, it might be safer to use the source
+# tree which would also enable proper SBOM generation through the
+# bitbake build system.
+#
+
 SRC_URI = "https://docbook.org/xml/4.1.2/docbkx412.zip;name=payload412;subdir=docbook-4.1.2 \
            https://docbook.org/xml/4.2/docbook-xml-4.2.zip;name=payload42;subdir=docbook-4.2 \
            https://docbook.org/xml/4.3/docbook-xml-4.3.zip;name=payload43;subdir=docbook-4.3 \
@@ -26,7 +41,7 @@ SRC_URI[payloadPV.sha256sum] = "4e4e037a2b83c98c6c94818390d4bdd3f6e10f6ec62dd791
 
 UPSTREAM_CHECK_REGEX = "docbook-xml-(?P<pver>4(\.\d+)).zip"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 do_configure (){
     :

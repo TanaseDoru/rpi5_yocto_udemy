@@ -4,17 +4,11 @@
 BitBake Supported Release Manuals
 =================================
 
-******************************
-Release Series 5.2 (walnascar)
-******************************
-
-- :yocto_docs:`BitBake 2.12 User Manual </bitbake/2.12/>`
-
 *******************************
-Release Series 5.0 (scarthgap)
+Release Series 4.2 (mickledore)
 *******************************
 
-- :yocto_docs:`BitBake 2.8 User Manual </bitbake/2.8/>`
+- :yocto_docs:`BitBake 2.4 User Manual </bitbake/2.4/>`
 
 ******************************
 Release Series 4.0 (kirkstone)
@@ -22,27 +16,15 @@ Release Series 4.0 (kirkstone)
 
 - :yocto_docs:`BitBake 2.0 User Manual </bitbake/2.0/>`
 
+****************************
+Release Series 3.1 (dunfell)
+****************************
+
+- :yocto_docs:`BitBake 1.46 User Manual </bitbake/1.46/>`
+
 ================================
 BitBake Outdated Release Manuals
 ================================
-
-****************************
-Release Series 5.1 (styhead)
-****************************
-
-- :yocto_docs:`BitBake 2.10 User Manual </bitbake/2.10/>`
-
-*******************************
-Release Series 4.3 (nanbield)
-*******************************
-
-- :yocto_docs:`BitBake 2.6 User Manual </bitbake/2.6/>`
-
-*******************************
-Release Series 4.2 (mickledore)
-*******************************
-
-- :yocto_docs:`BitBake 2.4 User Manual </bitbake/2.4/>`
 
 *****************************
 Release Series 4.1 (langdale)
@@ -68,11 +50,10 @@ Release Series 3.2 (gatesgarth)
 
 - :yocto_docs:`BitBake 1.48 User Manual </bitbake/1.48/>`
 
-****************************
-Release Series 3.1 (dunfell)
-****************************
+*******************************************
+Release Series 3.1 (dunfell first versions)
+*******************************************
 
-- :yocto_docs:`BitBake 1.46 User Manual </bitbake/1.46/>`
 - :yocto_docs:`3.1 BitBake User Manual </3.1/bitbake-user-manual/bitbake-user-manual.html>`
 - :yocto_docs:`3.1.1 BitBake User Manual </3.1.1/bitbake-user-manual/bitbake-user-manual.html>`
 - :yocto_docs:`3.1.2 BitBake User Manual </3.1.2/bitbake-user-manual/bitbake-user-manual.html>`

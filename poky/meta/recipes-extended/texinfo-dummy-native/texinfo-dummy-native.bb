@@ -8,7 +8,7 @@ PV = "1.0"
 
 SRC_URI = "file://template.py file://COPYING"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 inherit native
 

@@ -7,7 +7,7 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 
 inherit systemd-boot-cfg
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 LABELS = "boot"
 

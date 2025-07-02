@@ -107,18 +107,18 @@ Considerations Specific to the OpenEmbedded Build System
 You can take some steps that are specific to the OpenEmbedded build
 system to make your images more secure:
 
--  Ensure that "allow-empty-password", "allow-root-login", or
-   "empty-root-password" are not one of your selected :term:`IMAGE_FEATURES`.
+-  Ensure "debug-tweaks" is not one of your selected
+   :term:`IMAGE_FEATURES`.
    When creating a new project, the default is to provide you with an
-   initial ``local.conf`` file that enables these features using the
+   initial ``local.conf`` file that enables this feature using the
    :term:`EXTRA_IMAGE_FEATURES`
    variable with the line::
 
-      EXTRA_IMAGE_FEATURES = "allow-empty-password empty-root-password allow-root-login"
+      EXTRA_IMAGE_FEATURES = "debug-tweaks"
 
-   To disable these features, simply comment out that line in your
+   To disable that feature, simply comment out that line in your
    ``local.conf`` file, or make sure :term:`IMAGE_FEATURES` does not contain
-   any of these features before producing your final image. Among other things,
+   "debug-tweaks" before producing your final image. Among other things,
    leaving this in place sets the root password as blank, which makes
    logging in for debugging or inspection easy during development but
    also means anyone can easily log in during production.

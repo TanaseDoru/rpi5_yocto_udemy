@@ -40,7 +40,7 @@ PACKAGE_ARCH = "${MACHINE_ARCH}"
 SYSROOT_DIRS += "/boot/devicetree"
 FILES:${PN} = "/boot/devicetree/*.dtb /boot/devicetree/*.dtbo"
 
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 B = "${WORKDIR}/build"
 
 # Default kernel includes, these represent what are normally used for in-kernel
@@ -108,11 +108,7 @@ def devicetree_compile(dtspath, includes, d):
         ppargs.append("-I{0}".format(i))
     ppargs += ["-o", "{0}.pp".format(dts), dtspath]
     bb.note("Running {0}".format(" ".join(ppargs)))
-    try:
-        subprocess.run(ppargs, check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        bb.fatal(f"Command '{' '.join(ppargs)}' failed with return code {e.returncode}\nstdout: {e.stdout.decode()}\nstderr: {e.stderr.decode()}\ndtspath: {os.path.abspath(dtspath)}")
-
+    subprocess.run(ppargs, check = True)
 
     # determine if the file is an overlay or not (using the preprocessed file)
     isoverlay = devicetree_source_is_overlay("{0}.pp".format(dts))
@@ -128,11 +124,7 @@ def devicetree_compile(dtspath, includes, d):
     dtcargs += ["-o", "{0}.{1}".format(dtname, "dtbo" if isoverlay else "dtb")]
     dtcargs += ["-I", "dts", "-O", "dtb", "{0}.pp".format(dts)]
     bb.note("Running {0}".format(" ".join(dtcargs)))
-    try:
-        subprocess.run(dtcargs, check=True, capture_output=True)
-    except subprocess.CalledProcessError as e:
-        bb.fatal(f"Command '{' '.join(dtcargs)}' failed with return code {e.returncode}\nstdout: {e.stdout.decode()}\nstderr: {e.stderr.decode()}\ndtname: {dtname}")
-
+    subprocess.run(dtcargs, check = True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
 python devicetree_do_compile() {
     import re
@@ -151,16 +143,14 @@ python devicetree_do_compile() {
 }
 
 devicetree_do_install() {
-    for dtb_file in *.dtb *.dtbo; do
-        [ -e "$dtb_file" ] || continue
-        install -Dm 0644 "${B}/$dtb_file" "${D}/boot/devicetree/$dtb_file"
+    for DTB_FILE in `ls *.dtb *.dtbo`; do
+        install -Dm 0644 ${B}/${DTB_FILE} ${D}/boot/devicetree/${DTB_FILE}
     done
 }
 
 devicetree_do_deploy() {
-    for dtb_file in *.dtb *.dtbo; do
-        [ -e "$dtb_file" ] || continue
-        install -Dm 0644 "${B}/$dtb_file" "${DEPLOYDIR}/devicetree/$dtb_file"
+    for DTB_FILE in `ls *.dtb *.dtbo`; do
+        install -Dm 0644 ${B}/${DTB_FILE} ${DEPLOYDIR}/devicetree/${DTB_FILE}
     done
 }
 addtask deploy before do_build after do_install

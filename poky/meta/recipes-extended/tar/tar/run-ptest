@@ -1,8 +1,14 @@
 #!/bin/sh
 
-cd @PTEST_PATH@/tests/
+# Define tar test work dir
+WORKDIR=@PTEST_PATH@/tests/
 
-# Clear old data
-rm -rf testsuite.dir testsuite.log
+# Run test
+cd ${WORKDIR}
+./atconfig ./atlocal ./testsuite
+
+# clear log
+rm -rf testsuite.dir
+rm -rf testsuite.log
 
 ./testsuite --am-fmt

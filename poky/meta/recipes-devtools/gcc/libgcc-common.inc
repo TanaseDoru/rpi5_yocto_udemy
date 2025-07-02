@@ -53,11 +53,6 @@ do_install:append:libc-newlib () {
 		rmdir ${D}${base_libdir}
 	fi
 }
-do_install:append:libc-picolibc () {
-	if [ "${base_libdir}" != "${libdir}" ]; then
-		rmdir ${D}${base_libdir}
-	fi
-}
 
 # No rpm package is actually created but -dev depends on it, avoid dnf error
 DEV_PKG_DEPENDENCY:libc-baremetal = ""
@@ -103,6 +98,7 @@ fakeroot python do_multilib_install() {
             os.unlink(dest)
         os.symlink(src, dest)
         return
+
 
     for ml in multilibs.split():
         tune = d.getVar('DEFAULTTUNE:virtclass-multilib-' + ml)

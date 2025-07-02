@@ -39,6 +39,9 @@ PACKAGES = ' \
             \
             '
 
+# Override by distro if needed
+VIRTUAL-RUNTIME_keymaps ?= "keymaps"
+
 #
 # packagegroup-base contain stuff needed for base system (machine related)
 #
@@ -71,6 +74,7 @@ RDEPENDS:packagegroup-base = "\
     ${@bb.utils.contains('DISTRO_FEATURES', 'ppp', 'packagegroup-base-ppp', '',d)} \
     ${@bb.utils.contains('DISTRO_FEATURES', 'zeroconf', 'packagegroup-base-zeroconf', '',d)} \
     "
+
 
 RRECOMMENDS:packagegroup-base = "\
     kernel-module-nls-utf8 \
@@ -118,7 +122,7 @@ python __anonymous () {
 # packages added by distribution
 #
 SUMMARY:packagegroup-distro-base = "${DISTRO} extras"
-DEPENDS:packagegroup-distro-base = "${DISTRO_EXTRA_DEPENDS}"
+DEPENDS_packagegroup-distro-base = "${DISTRO_EXTRA_DEPENDS}"
 RDEPENDS:packagegroup-distro-base = "${DISTRO_EXTRA_RDEPENDS}"
 RRECOMMENDS:packagegroup-distro-base = "${DISTRO_EXTRA_RRECOMMENDS}"
 

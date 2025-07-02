@@ -8,7 +8,7 @@ RECIPE_NO_UPDATE_REASON = "This recipe is used to test devtool upgrade feature"
 
 SRC_URI[md5sum] = "9365d86bd884222b4bf1039b5a9ed1bd"
 
-S = "${UNPACKDIR}/pv-${PV}"
+S = "${WORKDIR}/pv-${PV}"
 
 EXCLUDE_FROM_WORLD = "1"
 

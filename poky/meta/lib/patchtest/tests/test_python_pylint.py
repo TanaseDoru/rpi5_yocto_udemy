@@ -6,7 +6,7 @@
 
 import base
 from io import StringIO
-from patchtest_parser import PatchtestParser
+from data import PatchTestInput
 from pylint.reporters.text import TextReporter
 import pylint.lint as lint
 

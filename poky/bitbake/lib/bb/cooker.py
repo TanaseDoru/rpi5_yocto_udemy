@@ -8,7 +8,7 @@
 #
 # SPDX-License-Identifier: GPL-2.0-only
 #
-import enum
+
 import sys, os, glob, os.path, re, time
 import itertools
 import logging
@@ -17,7 +17,7 @@ import threading
 from io import StringIO, UnsupportedOperation
 from contextlib import closing
 from collections import defaultdict, namedtuple
-import bb, bb.command
+import bb, bb.exceptions, bb.command
 from bb import utils, data, parse, event, cache, providers, taskdata, runqueue, build
 import queue
 import signal
@@ -48,15 +48,16 @@ class CollectionError(bb.BBHandledException):
     Exception raised when layer configuration is incorrect
     """
 
+class state:
+    initial, parsing, running, shutdown, forceshutdown, stopped, error = list(range(7))
 
-class State(enum.Enum):
-    INITIAL = 0,
-    PARSING = 1,
-    RUNNING = 2,
-    SHUTDOWN = 3,
-    FORCE_SHUTDOWN = 4,
-    STOPPED = 5,
-    ERROR = 6
+    @classmethod
+    def get_name(cls, code):
+        for name in dir(cls):
+            value = getattr(cls, name)
+            if type(value) == type(cls.initial) and value == code:
+                return name
+        raise ValueError("Invalid status code: %s" % code)
 
 
 class SkippedPackage:
@@ -133,8 +134,7 @@ class BBCooker:
         self.baseconfig_valid = False
         self.parsecache_valid = False
         self.eventlog = None
-        # The skiplists, one per multiconfig
-        self.skiplist_by_mc = defaultdict(dict)
+        self.skiplist = {}
         self.featureset = CookerFeatures()
         if featureSet:
             for f in featureSet:
@@ -180,7 +180,7 @@ class BBCooker:
             pass
 
         self.command = bb.command.Command(self, self.process_server)
-        self.state = State.INITIAL
+        self.state = state.initial
 
         self.parser = None
 
@@ -226,22 +226,23 @@ class BBCooker:
             bb.warn("Cooker received SIGTERM, shutting down...")
         elif signum == signal.SIGHUP:
             bb.warn("Cooker received SIGHUP, shutting down...")
-        self.state = State.FORCE_SHUTDOWN
+        self.state = state.forceshutdown
         bb.event._should_exit.set()
 
     def setFeatures(self, features):
         # we only accept a new feature set if we're in state initial, so we can reset without problems
-        if not self.state in [State.INITIAL, State.SHUTDOWN, State.FORCE_SHUTDOWN, State.STOPPED, State.ERROR]:
+        if not self.state in [state.initial, state.shutdown, state.forceshutdown, state.stopped, state.error]:
             raise Exception("Illegal state for feature set change")
         original_featureset = list(self.featureset)
         for feature in features:
             self.featureset.setFeature(feature)
         bb.debug(1, "Features set %s (was %s)" % (original_featureset, list(self.featureset)))
-        if (original_featureset != list(self.featureset)) and self.state != State.ERROR and hasattr(self, "data"):
+        if (original_featureset != list(self.featureset)) and self.state != state.error and hasattr(self, "data"):
             self.reset()
 
     def initConfigurationData(self):
-        self.state = State.INITIAL
+
+        self.state = state.initial
         self.caches_array = []
 
         sys.path = self.orig_syspath.copy()
@@ -280,6 +281,7 @@ class BBCooker:
         self.databuilder = bb.cookerdata.CookerDataBuilder(self.configuration, False)
         self.databuilder.parseBaseConfiguration()
         self.data = self.databuilder.data
+        self.data_hash = self.databuilder.data_hash
         self.extraconfigdata = {}
 
         eventlog = self.data.getVar("BB_DEFAULT_EVENTLOG")
@@ -316,14 +318,8 @@ class BBCooker:
                     try:
                         with hashserv.create_client(upstream) as client:
                             client.ping()
-                    except ImportError as e:
-                        bb.fatal(""""Unable to use hash equivalence server at '%s' due to missing or incorrect python module:
-%s
-Please install the needed module on the build host, or use an environment containing it (e.g a pip venv or OpenEmbedded's buildtools tarball).
-You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in significantly longer build times as bitbake will be unable to reuse prebuilt sstate artefacts."""
-                                 % (upstream, repr(e)))
-                    except ConnectionError as e:
-                        bb.warn("Unable to connect to hash equivalence server at '%s', please correct or remove BB_HASHSERVE_UPSTREAM:\n%s"
+                    except (ConnectionError, ImportError) as e:
+                        bb.warn("BB_HASHSERVE_UPSTREAM is not valid, unable to connect hash equivalence server at '%s': %s"
                                  % (upstream, repr(e)))
                         upstream = None
 
@@ -373,11 +369,6 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
 
         if not clean:
             bb.parse.BBHandler.cached_statements = {}
-
-        # If writes were made to any of the data stores, we need to recalculate the data
-        # store cache
-        if hasattr(self, "databuilder"):
-            self.databuilder.calc_datastore_hashes()
 
     def parseConfiguration(self):
         self.updateCacheSync()
@@ -621,8 +612,8 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         localdata = {}
 
         for mc in self.multiconfigs:
-            taskdata[mc] = bb.taskdata.TaskData(halt, skiplist=self.skiplist_by_mc[mc], allowincomplete=allowincomplete)
-            localdata[mc] = bb.data.createCopy(self.databuilder.mcdata[mc])
+            taskdata[mc] = bb.taskdata.TaskData(halt, skiplist=self.skiplist, allowincomplete=allowincomplete)
+            localdata[mc] = data.createCopy(self.databuilder.mcdata[mc])
             bb.data.expandKeys(localdata[mc])
 
         current = 0
@@ -689,14 +680,14 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         bb.event.fire(bb.event.TreeDataPreparationCompleted(len(fulltargetlist)), self.data)
         return taskdata, runlist
 
-    def prepareTreeData(self, pkgs_to_build, task, halt=False):
+    def prepareTreeData(self, pkgs_to_build, task):
         """
         Prepare a runqueue and taskdata object for iteration over pkgs_to_build
         """
 
         # We set halt to False here to prevent unbuildable targets raising
         # an exception when we're just generating data
-        taskdata, runlist = self.buildTaskData(pkgs_to_build, task, halt, allowincomplete=True)
+        taskdata, runlist = self.buildTaskData(pkgs_to_build, task, False, allowincomplete=True)
 
         return runlist, taskdata
 
@@ -710,7 +701,7 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         if not task.startswith("do_"):
             task = "do_%s" % task
 
-        runlist, taskdata = self.prepareTreeData(pkgs_to_build, task, halt=True)
+        runlist, taskdata = self.prepareTreeData(pkgs_to_build, task)
         rq = bb.runqueue.RunQueue(self, self.data, self.recipecaches, taskdata, runlist)
         rq.rqdata.prepare()
         return self.buildDependTree(rq, taskdata)
@@ -905,11 +896,10 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
 
         depgraph = self.generateTaskDepTreeData(pkgs_to_build, task)
 
-        pns = depgraph["pn"].keys()
-        if pns:
-            with open('pn-buildlist', 'w') as f:
-                f.write("%s\n" % "\n".join(sorted(pns)))
-            logger.info("PN build list saved to 'pn-buildlist'")
+        with open('pn-buildlist', 'w') as f:
+            for pn in depgraph["pn"]:
+                f.write(pn + "\n")
+        logger.info("PN build list saved to 'pn-buildlist'")
 
         # Remove old format output files to ensure no confusion with stale data
         try:
@@ -943,7 +933,7 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         for mc in self.multiconfigs:
             # First get list of recipes, including skipped
             recipefns = list(self.recipecaches[mc].pkg_fn.keys())
-            recipefns.extend(self.skiplist_by_mc[mc].keys())
+            recipefns.extend(self.skiplist.keys())
 
             # Work out list of bbappends that have been applied
             applied_appends = []
@@ -962,7 +952,13 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
                                                                         '\n  '.join(appends_without_recipes[mc])))
 
         if msgs:
-            bb.fatal("\n".join(msgs))
+            msg = "\n".join(msgs)
+            warn_only = self.databuilder.mcdata[mc].getVar("BB_DANGLINGAPPENDS_WARNONLY", \
+                False) or "no"
+            if warn_only.lower() in ("1", "yes", "true"):
+                bb.warn(msg)
+            else:
+                bb.fatal(msg)
 
     def handlePrefProviders(self):
 
@@ -1342,7 +1338,7 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         self.buildSetVars()
         self.reset_mtime_caches()
 
-        bb_caches = bb.cache.MulticonfigCache(self.databuilder, self.databuilder.data_hash, self.caches_array)
+        bb_caches = bb.cache.MulticonfigCache(self.databuilder, self.data_hash, self.caches_array)
 
         layername = self.collections[mc].calc_bbfile_priority(fn)[2]
         infos = bb_caches[mc].parse(fn, self.collections[mc].get_file_appends(fn), layername)
@@ -1403,11 +1399,11 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
 
             msg = None
             interrupted = 0
-            if halt or self.state == State.FORCE_SHUTDOWN:
+            if halt or self.state == state.forceshutdown:
                 rq.finish_runqueue(True)
                 msg = "Forced shutdown"
                 interrupted = 2
-            elif self.state == State.SHUTDOWN:
+            elif self.state == state.shutdown:
                 rq.finish_runqueue(False)
                 msg = "Stopped build"
                 interrupted = 1
@@ -1477,12 +1473,12 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         def buildTargetsIdle(server, rq, halt):
             msg = None
             interrupted = 0
-            if halt or self.state == State.FORCE_SHUTDOWN:
+            if halt or self.state == state.forceshutdown:
                 bb.event._should_exit.set()
                 rq.finish_runqueue(True)
                 msg = "Forced shutdown"
                 interrupted = 2
-            elif self.state == State.SHUTDOWN:
+            elif self.state == state.shutdown:
                 rq.finish_runqueue(False)
                 msg = "Stopped build"
                 interrupted = 1
@@ -1577,7 +1573,7 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
 
 
     def updateCacheSync(self):
-        if self.state == State.RUNNING:
+        if self.state == state.running:
             return
 
         if not self.baseconfig_valid:
@@ -1587,19 +1583,19 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
 
     # This is called for all async commands when self.state != running
     def updateCache(self):
-        if self.state == State.RUNNING:
+        if self.state == state.running:
             return
 
-        if self.state in (State.SHUTDOWN, State.FORCE_SHUTDOWN, State.ERROR):
+        if self.state in (state.shutdown, state.forceshutdown, state.error):
             if hasattr(self.parser, 'shutdown'):
                 self.parser.shutdown(clean=False)
                 self.parser.final_cleanup()
             raise bb.BBHandledException()
 
-        if self.state != State.PARSING:
+        if self.state != state.parsing:
             self.updateCacheSync()
 
-        if self.state != State.PARSING and not self.parsecache_valid:
+        if self.state != state.parsing and not self.parsecache_valid:
             bb.server.process.serverlog("Parsing started")
             self.parsewatched = {}
 
@@ -1633,10 +1629,9 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
             self.parser = CookerParser(self, mcfilelist, total_masked)
             self._parsecache_set(True)
 
-        self.state = State.PARSING
+        self.state = state.parsing
 
         if not self.parser.parse_next():
-            bb.server.process.serverlog("Parsing completed")
             collectlog.debug("parsing complete")
             if self.parser.error:
                 raise bb.BBHandledException()
@@ -1644,7 +1639,7 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
             self.handlePrefProviders()
             for mc in self.multiconfigs:
                 self.recipecaches[mc].bbfile_priority = self.collections[mc].collection_priorities(self.recipecaches[mc].pkg_fn, self.parser.mcfilelist[mc], self.data)
-            self.state = State.RUNNING
+            self.state = state.running
 
             # Send an event listing all stamps reachable after parsing
             # which the metadata may use to clean up stale data
@@ -1717,10 +1712,10 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
 
     def shutdown(self, force=False):
         if force:
-            self.state = State.FORCE_SHUTDOWN
+            self.state = state.forceshutdown
             bb.event._should_exit.set()
         else:
-            self.state = State.SHUTDOWN
+            self.state = state.shutdown
 
         if self.parser:
             self.parser.shutdown(clean=False)
@@ -1730,7 +1725,7 @@ You can also remove the BB_HASHSERVE_UPSTREAM setting, but this may result in si
         if hasattr(self.parser, 'shutdown'):
             self.parser.shutdown(clean=False)
             self.parser.final_cleanup()
-        self.state = State.INITIAL
+        self.state = state.initial
         bb.event._should_exit.clear()
 
     def reset(self):
@@ -1817,8 +1812,8 @@ class CookerCollectFiles(object):
             bb.event.fire(CookerExit(), eventdata)
 
         # We need to track where we look so that we can know when the cache is invalid. There
-        # is no nice way to do this, this is horrid. We intercept the os.listdir() and os.scandir()
-        # calls while we run glob().
+        # is no nice way to do this, this is horrid. We intercept the os.listdir()
+        # (or os.scandir() for python 3.6+) calls while we run glob().
         origlistdir = os.listdir
         if hasattr(os, 'scandir'):
             origscandir = os.scandir
@@ -2102,6 +2097,7 @@ class Parser(multiprocessing.Process):
         except Exception as exc:
             tb = sys.exc_info()[2]
             exc.recipe = filename
+            exc.traceback = list(bb.exceptions.extract_traceback(tb, context=3))
             return True, None, exc
         # Need to turn BaseExceptions into Exceptions here so we gracefully shutdown
         # and for example a worker thread doesn't just exit on its own in response to
@@ -2116,7 +2112,7 @@ class CookerParser(object):
         self.mcfilelist = mcfilelist
         self.cooker = cooker
         self.cfgdata = cooker.data
-        self.cfghash = cooker.databuilder.data_hash
+        self.cfghash = cooker.data_hash
         self.cfgbuilder = cooker.databuilder
 
         # Accounting statistics
@@ -2228,8 +2224,9 @@ class CookerParser(object):
 
         for process in self.processes:
             process.join()
-            # clean up zombies
-            process.close()
+            # Added in 3.7, cleans up zombies
+            if hasattr(process, "close"):
+                process.close()
 
         bb.codeparser.parser_cache_save()
         bb.codeparser.parser_cache_savemerge()
@@ -2239,13 +2236,12 @@ class CookerParser(object):
             profiles = []
             for i in self.process_names:
                 logfile = "profile-parse-%s.log" % i
-                if os.path.exists(logfile) and os.path.getsize(logfile):
+                if os.path.exists(logfile):
                     profiles.append(logfile)
 
-            if profiles:
-                pout = "profile-parse.log.processed"
-                bb.utils.process_profilelog(profiles, pout = pout)
-                print("Processed parsing statistics saved to %s" % (pout))
+            pout = "profile-parse.log.processed"
+            bb.utils.process_profilelog(profiles, pout = pout)
+            print("Processed parsing statistics saved to %s" % (pout))
 
     def final_cleanup(self):
         if self.syncthread:
@@ -2302,12 +2298,8 @@ class CookerParser(object):
             return False
         except ParsingFailure as exc:
             self.error += 1
-
-            exc_desc = str(exc)
-            if isinstance(exc, SystemExit) and not isinstance(exc.code, str):
-                exc_desc = 'Exited with "%d"' % exc.code
-
-            logger.error('Unable to parse %s: %s' % (exc.recipe, exc_desc))
+            logger.error('Unable to parse %s: %s' %
+                     (exc.recipe, bb.exceptions.to_string(exc.realexception)))
             self.shutdown(clean=False)
             return False
         except bb.parse.ParseError as exc:
@@ -2316,33 +2308,20 @@ class CookerParser(object):
             self.shutdown(clean=False, eventmsg=str(exc))
             return False
         except bb.data_smart.ExpansionError as exc:
-            def skip_frames(f, fn_prefix):
-                while f and f.tb_frame.f_code.co_filename.startswith(fn_prefix):
-                    f = f.tb_next
-                return f
-
             self.error += 1
             bbdir = os.path.dirname(__file__) + os.sep
-            etype, value, tb = sys.exc_info()
-
-            # Remove any frames where the code comes from bitbake. This
-            # prevents deep (and pretty useless) backtraces for expansion error
-            tb = skip_frames(tb, bbdir)
-            cur = tb
-            while cur:
-                cur.tb_next = skip_frames(cur.tb_next, bbdir)
-                cur = cur.tb_next
-
+            etype, value, _ = sys.exc_info()
+            tb = list(itertools.dropwhile(lambda e: e.filename.startswith(bbdir), exc.traceback))
             logger.error('ExpansionError during parsing %s', value.recipe,
                          exc_info=(etype, value, tb))
             self.shutdown(clean=False)
             return False
         except Exception as exc:
             self.error += 1
-            _, value, _ = sys.exc_info()
+            etype, value, tb = sys.exc_info()
             if hasattr(value, "recipe"):
                 logger.error('Unable to parse %s' % value.recipe,
-                            exc_info=sys.exc_info())
+                            exc_info=(etype, value, exc.traceback))
             else:
                 # Most likely, an exception occurred during raising an exception
                 import traceback
@@ -2363,7 +2342,7 @@ class CookerParser(object):
         for virtualfn, info_array in result:
             if info_array[0].skipped:
                 self.skipped += 1
-                self.cooker.skiplist_by_mc[mc][virtualfn] = SkippedPackage(info_array[0])
+                self.cooker.skiplist[virtualfn] = SkippedPackage(info_array[0])
             self.bb_caches[mc].add_info(virtualfn, info_array, self.cooker.recipecaches[mc],
                                         parsed=parsed, watcher = self.cooker.add_filewatch)
         return True

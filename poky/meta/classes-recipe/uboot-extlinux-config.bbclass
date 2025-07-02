@@ -15,7 +15,6 @@
 # UBOOT_EXTLINUX_KERNEL_IMAGE      - Kernel image name.
 # UBOOT_EXTLINUX_FDTDIR            - Device tree directory.
 # UBOOT_EXTLINUX_FDT               - Device tree file.
-# UBOOT_EXTLINUX_FDTOVERLAYS       - Device tree overlay files. Space-separated list.
 # UBOOT_EXTLINUX_INITRD            - Indicates a list of filesystem images to
 #                                    concatenate and use as an initrd (optional).
 # UBOOT_EXTLINUX_MENU_DESCRIPTION  - Name to use as description.
@@ -67,7 +66,6 @@
 UBOOT_EXTLINUX_CONSOLE ??= "console=${console},${baudrate}"
 UBOOT_EXTLINUX_LABELS ??= "linux"
 UBOOT_EXTLINUX_FDT ??= ""
-UBOOT_EXTLINUX_FDTOVERLAYS ??= ""
 UBOOT_EXTLINUX_FDTDIR ??= "../"
 UBOOT_EXTLINUX_KERNEL_IMAGE ??= "../${KERNEL_IMAGETYPE}"
 UBOOT_EXTLINUX_KERNEL_ARGS ??= "rootwait rw"
@@ -138,17 +136,15 @@ python do_create_extlinux_config() {
                 fdtdir = localdata.getVar('UBOOT_EXTLINUX_FDTDIR')
 
                 fdt = localdata.getVar('UBOOT_EXTLINUX_FDT')
-                fdtoverlays = localdata.getVar('UBOOT_EXTLINUX_FDTOVERLAYS')
-
-                cfgfile.write('LABEL %s\n\tKERNEL %s\n' % (menu_description, kernel_image))
 
                 if fdt:
-                    cfgfile.write('\tFDT %s\n' % (fdt))
+                    cfgfile.write('LABEL %s\n\tKERNEL %s\n\tFDT %s\n' %
+                                 (menu_description, kernel_image, fdt))
                 elif fdtdir:
-                    cfgfile.write('\tFDTDIR %s\n' % (fdtdir))
-
-                if fdtoverlays:
-                    cfgfile.write('\tFDTOVERLAYS %s\n' % (' '.join(fdtoverlays.split())))
+                    cfgfile.write('LABEL %s\n\tKERNEL %s\n\tFDTDIR %s\n' %
+                                 (menu_description, kernel_image, fdtdir))
+                else:
+                    cfgfile.write('LABEL %s\n\tKERNEL %s\n' % (menu_description, kernel_image))
 
                 kernel_args = localdata.getVar('UBOOT_EXTLINUX_KERNEL_ARGS')
 
@@ -162,7 +158,7 @@ python do_create_extlinux_config() {
     except OSError:
         bb.fatal('Unable to open %s' % (cfile))
 }
-UBOOT_EXTLINUX_VARS = "CONSOLE MENU_DESCRIPTION ROOT KERNEL_IMAGE FDTDIR FDT FDTOVERLAYS KERNEL_ARGS INITRD"
+UBOOT_EXTLINUX_VARS = "CONSOLE MENU_DESCRIPTION ROOT KERNEL_IMAGE FDTDIR FDT KERNEL_ARGS INITRD"
 do_create_extlinux_config[vardeps] += "${@' '.join(['UBOOT_EXTLINUX_%s:%s' % (v, l) for v in d.getVar('UBOOT_EXTLINUX_VARS').split() for l in d.getVar('UBOOT_EXTLINUX_LABELS').split()])}"
 do_create_extlinux_config[vardepsexclude] += "OVERRIDES"
 

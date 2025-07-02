@@ -197,8 +197,6 @@ def exec_func(func, d, dirs = None):
         for cdir in d.expand(cleandirs).split():
             bb.utils.remove(cdir, True)
             bb.utils.mkdirhier(cdir)
-            if cdir == oldcwd:
-                os.chdir(cdir)
 
     if flags and dirs is None:
         dirs = flags.get('dirs')
@@ -397,7 +395,7 @@ def create_progress_handler(func, progress, logfile, d):
         # Use specified regex
         return bb.progress.OutOfProgressHandler(d, regex=progress.split(':', 1)[1], outfile=logfile)
     elif progress.startswith("custom:"):
-        # Use a custom progress handler that was injected via other means
+        # Use a custom progress handler that was injected via OE_EXTRA_IMPORTS or __builtins__
         import functools
         from types import ModuleType
 
@@ -743,7 +741,7 @@ def _exec_task(fn, task, d, quieterr):
 
         if quieterr:
             if not handled:
-                logger.warning(str(exc))
+                logger.warning(repr(exc))
             event.fire(TaskFailedSilent(task, fn, logfn, localdata), localdata)
         else:
             errprinted = errchk.triggered
@@ -752,7 +750,7 @@ def _exec_task(fn, task, d, quieterr):
             if verboseStdoutLogging or handled:
                 errprinted = True
             if not handled:
-                logger.error(str(exc))
+                logger.error(repr(exc))
             event.fire(TaskFailed(task, fn, logfn, localdata, errprinted), localdata)
         return 1
 
@@ -932,13 +930,9 @@ def add_tasks(tasklist, d):
     # don't assume holding a reference
     d.setVar('_task_deps', task_deps)
 
-def ensure_task_prefix(name):
-    if name[:3] != "do_":
-        name = "do_" + name
-    return name
-
 def addtask(task, before, after, d):
-    task = ensure_task_prefix(task)
+    if task[:3] != "do_":
+        task = "do_" + task
 
     d.setVarFlag(task, "task", 1)
     bbtasks = d.getVar('__BBTASKS', False) or []
@@ -950,20 +944,19 @@ def addtask(task, before, after, d):
     if after is not None:
         # set up deps for function
         for entry in after.split():
-            entry = ensure_task_prefix(entry)
             if entry not in existing:
                 existing.append(entry)
     d.setVarFlag(task, "deps", existing)
     if before is not None:
         # set up things that depend on this func
         for entry in before.split():
-            entry = ensure_task_prefix(entry)
             existing = d.getVarFlag(entry, "deps", False) or []
             if task not in existing:
                 d.setVarFlag(entry, "deps", [task] + existing)
 
 def deltask(task, d):
-    task = ensure_task_prefix(task)
+    if task[:3] != "do_":
+        task = "do_" + task
 
     bbtasks = d.getVar('__BBTASKS', False) or []
     if task in bbtasks:
@@ -1028,9 +1021,3 @@ def tasksbetween(task_start, task_end, d):
         chain.pop()
     follow_chain(task_start, task_end)
     return outtasks
-
-def listtasks(d):
-    """
-    Return the list of tasks in the current recipe.
-    """
-    return tuple(d.getVar('__BBTASKS', False) or ())

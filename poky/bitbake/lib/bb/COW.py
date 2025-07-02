@@ -36,9 +36,8 @@ class COWDictMeta(COWMeta):
     __marker__ = tuple()
 
     def __str__(cls):
-        ignored_keys = set(["__count__", "__doc__", "__module__", "__firstlineno__", "__static_attributes__"])
-        keys = set(cls.__dict__.keys()) - ignored_keys
-        return "<COWDict Level: %i Current Keys: %i>" % (cls.__count__, len(keys))
+        # FIXME: I have magic numbers!
+        return "<COWDict Level: %i Current Keys: %i>" % (cls.__count__, len(cls.__dict__) - 3)
 
     __repr__ = __str__
 
@@ -162,9 +161,8 @@ class COWDictMeta(COWMeta):
 
 class COWSetMeta(COWDictMeta):
     def __str__(cls):
-        ignored_keys = set(["__count__", "__doc__", "__module__", "__firstlineno__", "__static_attributes__"])
-        keys = set(cls.__dict__.keys()) - ignored_keys
-        return "<COWSet Level: %i Current Keys: %i>" % (cls.__count__, len(keys))
+        # FIXME: I have magic numbers!
+        return "<COWSet Level: %i Current Keys: %i>" % (cls.__count__, len(cls.__dict__) - 3)
 
     __repr__ = __str__
 

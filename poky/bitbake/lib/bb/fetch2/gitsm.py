@@ -62,35 +62,36 @@ class GitSM(Git):
             return modules
 
         # Collect the defined submodules, and their attributes
-        try:
-            gitmodules = runfetchcmd("%s show %s:.gitmodules" % (ud.basecmd, ud.revision), d, quiet=True, workdir=workdir)
-        except:
-            # No submodules to update
-            gitmodules = ""
-
-        for m, md in parse_gitmodules(gitmodules).items():
+        for name in ud.names:
             try:
-                module_hash = runfetchcmd("%s ls-tree -z -d %s %s" % (ud.basecmd, ud.revision, md['path']), d, quiet=True, workdir=workdir)
+                gitmodules = runfetchcmd("%s show %s:.gitmodules" % (ud.basecmd, ud.revisions[name]), d, quiet=True, workdir=workdir)
             except:
-                # If the command fails, we don't have a valid file to check.  If it doesn't
-                # fail -- it still might be a failure, see next check...
-                module_hash = ""
-
-            if not module_hash:
-                logger.debug("submodule %s is defined, but is not initialized in the repository. Skipping", m)
+                # No submodules to update
                 continue
 
-            submodules.append(m)
-            paths[m] = md['path']
-            revision[m] = ud.revision
-            uris[m] = md['url']
-            subrevision[m] = module_hash.split()[2]
+            for m, md in parse_gitmodules(gitmodules).items():
+                try:
+                    module_hash = runfetchcmd("%s ls-tree -z -d %s %s" % (ud.basecmd, ud.revisions[name], md['path']), d, quiet=True, workdir=workdir)
+                except:
+                    # If the command fails, we don't have a valid file to check.  If it doesn't
+                    # fail -- it still might be a failure, see next check...
+                    module_hash = ""
 
-            # Convert relative to absolute uri based on parent uri
-            if  uris[m].startswith('..') or uris[m].startswith('./'):
-                newud = copy.copy(ud)
-                newud.path = os.path.normpath(os.path.join(newud.path, uris[m]))
-                uris[m] = Git._get_repo_url(self, newud)
+                if not module_hash:
+                    logger.debug("submodule %s is defined, but is not initialized in the repository. Skipping", m)
+                    continue
+
+                submodules.append(m)
+                paths[m] = md['path']
+                revision[m] = ud.revisions[name]
+                uris[m] = md['url']
+                subrevision[m] = module_hash.split()[2]
+
+                # Convert relative to absolute uri based on parent uri
+                if  uris[m].startswith('..') or uris[m].startswith('./'):
+                    newud = copy.copy(ud)
+                    newud.path = os.path.normpath(os.path.join(newud.path, uris[m]))
+                    uris[m] = Git._get_repo_url(self, newud)
 
         for module in submodules:
             # Translate the module url into a SRC_URI
@@ -122,7 +123,7 @@ class GitSM(Git):
             url += ";name=%s" % module
             url += ";subpath=%s" % module
             url += ";nobranch=1"
-            url += ";lfs=%s" % ("1" if self._need_lfs(ud) else "0")
+            url += ";lfs=%s" % self._need_lfs(ud)
             # Note that adding "user=" here to give credentials to the
             # submodule is not supported. Since using SRC_URI to give git://
             # URL a password is not supported, one have to use one of the
@@ -146,22 +147,6 @@ class GitSM(Git):
 
         return submodules != []
 
-    def call_process_submodules(self, ud, d, extra_check, subfunc):
-        # If we're using a shallow mirror tarball it needs to be
-        # unpacked temporarily so that we can examine the .gitmodules file
-        # Unpack even when ud.clonedir is not available,
-        # which may occur during a fast shallow clone
-        unpack = extra_check or not os.path.exists(ud.clonedir)
-        if ud.shallow and os.path.exists(ud.fullshallow) and unpack:
-            tmpdir = tempfile.mkdtemp(dir=d.getVar("DL_DIR"))
-            try:
-                runfetchcmd("tar -xzf %s" % ud.fullshallow, d, workdir=tmpdir)
-                self.process_submodules(ud, tmpdir, subfunc, d)
-            finally:
-                shutil.rmtree(tmpdir)
-        else:
-            self.process_submodules(ud, ud.clonedir, subfunc, d)
-
     def need_update(self, ud, d):
         if Git.need_update(self, ud, d):
             return True
@@ -179,7 +164,15 @@ class GitSM(Git):
                 logger.error('gitsm: submodule update check failed: %s %s' % (type(e).__name__, str(e)))
                 need_update_result = True
 
-        self.call_process_submodules(ud, d, not os.path.exists(ud.clonedir), need_update_submodule)
+        # If we're using a shallow mirror tarball it needs to be unpacked
+        # temporarily so that we can examine the .gitmodules file
+        if ud.shallow and os.path.exists(ud.fullshallow) and not os.path.exists(ud.clonedir):
+            tmpdir = tempfile.mkdtemp(dir=d.getVar("DL_DIR"))
+            runfetchcmd("tar -xzf %s" % ud.fullshallow, d, workdir=tmpdir)
+            self.process_submodules(ud, tmpdir, need_update_submodule, d)
+            shutil.rmtree(tmpdir)
+        else:
+            self.process_submodules(ud, ud.clonedir, need_update_submodule, d)
 
         if need_update_list:
             logger.debug('gitsm: Submodules requiring update: %s' % (' '.join(need_update_list)))
@@ -202,7 +195,16 @@ class GitSM(Git):
                 raise
 
         Git.download(self, ud, d)
-        self.call_process_submodules(ud, d, self.need_update(ud, d), download_submodule)
+
+        # If we're using a shallow mirror tarball it needs to be unpacked
+        # temporarily so that we can examine the .gitmodules file
+        if ud.shallow and os.path.exists(ud.fullshallow) and self.need_update(ud, d):
+            tmpdir = tempfile.mkdtemp(dir=d.getVar("DL_DIR"))
+            runfetchcmd("tar -xzf %s" % ud.fullshallow, d, workdir=tmpdir)
+            self.process_submodules(ud, tmpdir, download_submodule, d)
+            shutil.rmtree(tmpdir)
+        else:
+            self.process_submodules(ud, ud.clonedir, download_submodule, d)
 
     def unpack(self, ud, destdir, d):
         def unpack_submodules(ud, url, module, modpath, workdir, d):
@@ -245,27 +247,15 @@ class GitSM(Git):
         ret = self.process_submodules(ud, ud.destdir, unpack_submodules, d)
 
         if not ud.bareclone and ret:
-            cmdprefix = ""
-            # Avoid LFS smudging (replacing the LFS pointers with the actual content) when LFS shouldn't be used but git-lfs is installed.
-            if not self._need_lfs(ud):
-                cmdprefix = "GIT_LFS_SKIP_SMUDGE=1 "
-            runfetchcmd("%s%s submodule update --recursive --no-fetch" % (cmdprefix, ud.basecmd), d, quiet=True, workdir=ud.destdir)
-    def clean(self, ud, d):
-        def clean_submodule(ud, url, module, modpath, workdir, d):
-            url += ";bareclone=1;nobranch=1"
-            try:
-                newfetch = Fetch([url], d, cache=False)
-                newfetch.clean()
-            except Exception as e:
-                logger.warning('gitsm: submodule clean failed: %s %s' % (type(e).__name__, str(e)))
-
-        self.call_process_submodules(ud, d, True, clean_submodule)
-
-        # Clean top git dir
-        Git.clean(self, ud, d)
+            # All submodules should already be downloaded and configured in the tree.  This simply
+            # sets up the configuration and checks out the files.  The main project config should
+            # remain unmodified, and no download from the internet should occur. As such, lfs smudge
+            # should also be skipped as these files were already smudged in the fetch stage if lfs
+            # was enabled.
+            runfetchcmd("GIT_LFS_SKIP_SMUDGE=1 %s submodule update --recursive --no-fetch" % (ud.basecmd), d, quiet=True, workdir=ud.destdir)
 
     def implicit_urldata(self, ud, d):
-        import subprocess
+        import shutil, subprocess, tempfile
 
         urldata = []
         def add_submodule(ud, url, module, modpath, workdir, d):
@@ -273,6 +263,14 @@ class GitSM(Git):
             newfetch = Fetch([url], d, cache=False)
             urldata.extend(newfetch.expanded_urldata())
 
-        self.call_process_submodules(ud, d, ud.method.need_update(ud, d), add_submodule)
+        # If we're using a shallow mirror tarball it needs to be unpacked
+        # temporarily so that we can examine the .gitmodules file
+        if ud.shallow and os.path.exists(ud.fullshallow) and ud.method.need_update(ud, d):
+            tmpdir = tempfile.mkdtemp(dir=d.getVar("DL_DIR"))
+            subprocess.check_call("tar -xzf %s" % ud.fullshallow, cwd=tmpdir, shell=True)
+            self.process_submodules(ud, tmpdir, add_submodule, d)
+            shutil.rmtree(tmpdir)
+        else:
+            self.process_submodules(ud, ud.clonedir, add_submodule, d)
 
         return urldata

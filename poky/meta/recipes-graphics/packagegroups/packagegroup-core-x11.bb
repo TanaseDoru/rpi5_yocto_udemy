@@ -2,6 +2,7 @@
 # Copyright (C) 2011 Intel Corporation
 #
 
+
 inherit packagegroup features_check
 REQUIRED_DISTRO_FEATURES = "x11"
 
@@ -29,5 +30,6 @@ RDEPENDS:${PN}-utils = "\
     xrandr \
     xmodmap \
     xdpyinfo \
-    xinput-calibrator \
+    xinput-calibrator \
+    dbus-x11 \
     "

@@ -19,10 +19,10 @@ IMAGE_LINGUAS = ""
 LIBC_DEPENDENCIES = ""
 
 EXTRA_OECONF:pn-gcc-cross-${TARGET_ARCH}:append = " --without-headers"
-DEPENDS:remove:pn-meta-toolchain = "virtual/libc virtual/compilerlibs"
+DEPENDS:remove:pn-meta-toolchain = "virtual/libc virtual/${TARGET_PREFIX}compilerlibs"
 
 # certain compiler libs cannot be used without libc, avoid the dependence on compilerlibs
-BASEDEPENDS:remove:class-target = "virtual/compilerlibs"
+BASEDEPENDS:remove:class-target = "virtual/${TARGET_PREFIX}compilerlibs"
 
 TARGET_OS = "elf"
 TARGET_OS:arm = "eabi"

@@ -4,7 +4,6 @@
 # SPDX-License-Identifier: MIT
 #
 
-BB_DEFER_BBCLASSES:remove = "cross"
 inherit cross
 
 CLASSOVERRIDE = "class-crosssdk"

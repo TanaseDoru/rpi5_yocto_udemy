@@ -6,14 +6,13 @@ LICENSE = "GPL-2.0-or-later"
 LIC_FILES_CHKSUM = "file://psplash.h;beginline=1;endline=8;md5=8f232c1e95929eacab37f00900580224"
 DEPENDS = "gdk-pixbuf-native"
 
-SRCREV = "53ae74a36bf17675228552abb927d2f981940a6a"
+SRCREV = "ecc1913756698d0c87ad8fa10e44b29537f09ad1"
 PV = "0.1+git"
 
 SRC_URI = "git://git.yoctoproject.org/${BPN};branch=master;protocol=https \
            file://psplash-init \
-           file://psplash-start@.service \
+           file://psplash-start.service \
            file://psplash-systemd.service \
-           file://fb.rules \
            ${SPLASH_IMAGES}"
 UPSTREAM_CHECK_COMMITS = "1"
 
@@ -62,6 +61,8 @@ python __anonymous() {
             d.appendVar("RDEPENDS:%s" % pn, " %s" % ep)
 }
 
+S = "${WORKDIR}/git"
+
 inherit autotools pkgconfig update-rc.d update-alternatives systemd
 
 PACKAGECONFIG ??= "${@bb.utils.filter('DISTRO_FEATURES', 'systemd', d)} progress-bar fullscreen"
@@ -79,7 +80,7 @@ python do_compile () {
     import subprocess
 
     # Build a separate executable for each splash image
-    workdir = d.getVar('UNPACKDIR')
+    workdir = d.getVar('WORKDIR')
     convertscript = "%s/make-image-header.sh" % d.getVar('S')
     destfile = "%s/psplash-poky-img.h" % d.getVar('B')
     localfiles = d.getVar('SPLASH_LOCALPATHS').split()
@@ -102,7 +103,7 @@ python do_compile () {
 do_install:append() {
 	if ${@bb.utils.contains('DISTRO_FEATURES', 'sysvinit', 'true', 'false', d)}; then
 		install -d ${D}${sysconfdir}/init.d/
-		install -m 0755 ${UNPACKDIR}/psplash-init ${D}${sysconfdir}/init.d/psplash.sh
+		install -m 0755 ${WORKDIR}/psplash-init ${D}${sysconfdir}/init.d/psplash.sh
 
 		# make fifo for psplash
 		install -d ${D}/mnt
@@ -111,10 +112,8 @@ do_install:append() {
 
 	if ${@bb.utils.contains('DISTRO_FEATURES', 'systemd', 'true', 'false', d)}; then
 		install -d ${D}${systemd_system_unitdir}
-		install -m 644 ${UNPACKDIR}/psplash-start@.service ${D}/${systemd_system_unitdir}
-		install -m 644 ${UNPACKDIR}/psplash-systemd.service ${D}/${systemd_system_unitdir}
-		install -d ${D}${sysconfdir}/udev/rules.d
-		install -m 0644 ${UNPACKDIR}/fb.rules ${D}${sysconfdir}/udev/rules.d/
+		install -m 644 ${WORKDIR}/psplash-start.service ${D}/${systemd_system_unitdir}
+		install -m 644 ${WORKDIR}/psplash-systemd.service ${D}/${systemd_system_unitdir}
 	fi
 
 	install -d ${D}${bindir}
@@ -125,7 +124,7 @@ do_install:append() {
 }
 
 SYSTEMD_PACKAGES = "${@bb.utils.contains('DISTRO_FEATURES','systemd','${PN}','',d)}"
-SYSTEMD_SERVICE:${PN} += "${@bb.utils.contains('PACKAGECONFIG', 'systemd', 'psplash-start@.service psplash-systemd.service', '', d)}"
+SYSTEMD_SERVICE:${PN} += "${@bb.utils.contains('PACKAGECONFIG', 'systemd', 'psplash-start.service psplash-systemd.service', '', d)}"
 
 INITSCRIPT_NAME = "psplash.sh"
 INITSCRIPT_PARAMS = "start 0 S . stop 20 0 1 6 ."

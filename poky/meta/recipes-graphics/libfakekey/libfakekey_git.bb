@@ -15,6 +15,8 @@ PV = "0.3+git"
 
 SRC_URI = "git://git.yoctoproject.org/${BPN};branch=master;protocol=https"
 
+S = "${WORKDIR}/git"
+
 inherit autotools pkgconfig gettext features_check
 
 # The libxtst requires x11 in DISTRO_FEATURES

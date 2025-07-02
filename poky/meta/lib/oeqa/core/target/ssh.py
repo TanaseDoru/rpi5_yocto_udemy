@@ -55,14 +55,14 @@ class OESSHTarget(OETarget):
     def stop(self, **kwargs):
         pass
 
-    def _run(self, command, timeout=None, ignore_status=True, raw=False):
+    def _run(self, command, timeout=None, ignore_status=True):
         """
             Runs command in target using SSHProcess.
         """
         self.logger.debug("[Running]$ %s" % " ".join(command))
 
         starttime = time.time()
-        status, output = SSHCall(command, self.logger, timeout, raw)
+        status, output = SSHCall(command, self.logger, timeout)
         self.logger.debug("[Command returned '%d' after %.2f seconds]"
                  "" % (status, time.time() - starttime))
 
@@ -72,7 +72,7 @@ class OESSHTarget(OETarget):
 
         return (status, output)
 
-    def run(self, command, timeout=None, ignore_status=True, raw=False):
+    def run(self, command, timeout=None, ignore_status=True):
         """
             Runs command in target.
 
@@ -91,11 +91,8 @@ class OESSHTarget(OETarget):
         else:
             processTimeout = self.timeout
 
-        status, output = self._run(sshCmd, processTimeout, ignore_status, raw)
-        if len(output) > (64 * 1024):
-            self.logger.debug('Command: %s\nStatus: %d Output length:  %s\n' % (command, status, len(output)))
-        else:
-            self.logger.debug('Command: %s\nStatus: %d Output:  %s\n' % (command, status, output))
+        status, output = self._run(sshCmd, processTimeout, ignore_status)
+        self.logger.debug('Command: %s\nStatus: %d Output:  %s\n' % (command, status, output))
 
         return (status, output)
 
@@ -209,23 +206,22 @@ class OESSHTarget(OETarget):
                 remoteDir = os.path.join(remotePath, tmpDir.lstrip("/"))
                 self.deleteDir(remoteDir)
 
-def SSHCall(command, logger, timeout=None, raw=False, **opts):
+def SSHCall(command, logger, timeout=None, **opts):
 
     def run():
         nonlocal output
         nonlocal process
-        output_raw = bytearray()
+        output_raw = b''
         starttime = time.time()
-        progress = time.time()
         process = subprocess.Popen(command, **options)
         has_timeout = False
-        appendline = None
         if timeout:
             endtime = starttime + timeout
             eof = False
             os.set_blocking(process.stdout.fileno(), False)
             while not has_timeout and not eof:
                 try:
+                    logger.debug('Waiting for process output: time: %s, endtime: %s' % (time.time(), endtime))
                     if select.select([process.stdout], [], [], 5)[0] != []:
                         # wait a bit for more data, tries to avoid reading single characters
                         time.sleep(0.2)
@@ -233,9 +229,9 @@ def SSHCall(command, logger, timeout=None, raw=False, **opts):
                         if not data:
                             eof = True
                         else:
-                            output_raw.extend(data)
+                            output_raw += data
                             # ignore errors to capture as much as possible
-                            #logger.debug('Partial data from SSH call:\n%s' % data.decode('utf-8', errors='ignore'))
+                            logger.debug('Partial data from SSH call:\n%s' % data.decode('utf-8', errors='ignore'))
                             endtime = time.time() + timeout
                 except InterruptedError:
                     logger.debug('InterruptedError')
@@ -247,10 +243,6 @@ def SSHCall(command, logger, timeout=None, raw=False, **opts):
                 if time.time() >= endtime:
                     logger.debug('SSHCall has timeout! Time: %s, endtime: %s' % (time.time(), endtime))
                     has_timeout = True
-
-                if time.time() >= (progress + 60):
-                    logger.debug('Waiting for process output at time: %s with datasize: %s' % (time.time(), len(output_raw)))
-                    progress = time.time()
 
             process.stdout.close()
 
@@ -264,29 +256,17 @@ def SSHCall(command, logger, timeout=None, raw=False, **opts):
                     logger.debug('OSError when killing process')
                     pass
                 endtime = time.time() - starttime
-                appendline = ("\nProcess killed - no output for %d seconds. Total"
+                lastline = ("\nProcess killed - no output for %d seconds. Total"
                             " running time: %d seconds." % (timeout, endtime))
-                logger.debug('Received data from SSH call:\n%s ' % appendline)
+                logger.debug('Received data from SSH call:\n%s ' % lastline)
+                output += lastline
                 process.wait()
 
-            if raw:
-                output = bytes(output_raw)
-                if appendline:
-                    output += bytes(appendline, "utf-8")
-            else:
-                output = output_raw.decode('utf-8', errors='ignore')
-                if appendline:
-                    output += appendline
         else:
-            output = output_raw = process.communicate()[0]
-            if not raw:
-                output = output_raw.decode('utf-8', errors='ignore')
+            output_raw = process.communicate()[0]
 
-        if len(output) < (64 * 1024):
-            if output.rstrip():
-                logger.debug('Data from SSH call:\n%s' % output.rstrip())
-            else:
-                logger.debug('No output from SSH call')
+        output = output_raw.decode('utf-8', errors='ignore')
+        logger.debug('Data from SSH call:\n%s' % output.rstrip())
 
         # timout or not, make sure process exits and is not hanging
         if process.returncode == None:
@@ -312,7 +292,7 @@ def SSHCall(command, logger, timeout=None, raw=False, **opts):
 
     options = {
         "stdout": subprocess.PIPE,
-        "stderr": subprocess.STDOUT if not raw else None,
+        "stderr": subprocess.STDOUT,
         "stdin": None,
         "shell": False,
         "bufsize": -1,
@@ -340,4 +320,4 @@ def SSHCall(command, logger, timeout=None, raw=False, **opts):
         logger.debug('Something went wrong, killing SSH process')
         raise
 
-    return (process.returncode, output if raw else output.rstrip())
+    return (process.returncode, output.rstrip())

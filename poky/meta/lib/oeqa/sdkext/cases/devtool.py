@@ -69,9 +69,10 @@ class DevtoolTest(OESDKExtTestCase):
         self._test_devtool_build(self.myapp_cmake_dst)
 
     def test_extend_autotools_recipe_creation(self):
-        recipe = "test-dbus-wait"
-        self._run('devtool sdk-install dbus')
-        self._run('devtool add %s https://git.yoctoproject.org/git/dbus-wait' % (recipe) )
+        req = 'https://github.com/rdfa/librdfa'
+        recipe = "librdfa"
+        self._run('devtool sdk-install libxml2')
+        self._run('devtool add %s %s' % (recipe, req) )
         try:
             self._run('devtool build %s' % recipe)
         finally:

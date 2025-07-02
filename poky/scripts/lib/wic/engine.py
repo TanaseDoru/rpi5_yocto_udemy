@@ -180,8 +180,6 @@ def wic_create(wks_file, rootfs_dir, bootimg_dir, kernel_dir,
         os.makedirs(options.outdir)
 
     pname = options.imager
-    # Don't support '-' in plugin names
-    pname = pname.replace("-", "_")
     plugin_class = PluginMgr.get_plugins('imager').get(pname)
     if not plugin_class:
         raise WicError('Unknown plugin: %s' % pname)
@@ -234,16 +232,6 @@ class Disk:
         self._psector_size = None
         self._ptable_format = None
 
-        # define sector size
-        sector_size_str = get_bitbake_var('WIC_SECTOR_SIZE')
-        if sector_size_str is not None:
-            try:
-                self.sector_size = int(sector_size_str)
-            except ValueError:
-                self.sector_size = None
-        else:
-            self.sector_size = None
-
         # find parted
         # read paths from $PATH environment variable
         # if it fails, use hardcoded paths
@@ -270,13 +258,7 @@ class Disk:
     def get_partitions(self):
         if self._partitions is None:
             self._partitions = OrderedDict()
-
-            if self.sector_size is not None:
-                out = exec_cmd("export PARTED_SECTOR_SIZE=%d; %s -sm %s unit B print" % \
-                           (self.sector_size, self.parted, self.imagepath), True)
-            else:
-                out = exec_cmd("%s -sm %s unit B print" % (self.parted, self.imagepath))
-
+            out = exec_cmd("%s -sm %s unit B print" % (self.parted, self.imagepath))
             parttype = namedtuple("Part", "pnum start end size fstype")
             splitted = out.splitlines()
             # skip over possible errors in exec_cmd output
@@ -377,7 +359,7 @@ class Disk:
         Remove files/dirs and their contents from the partition.
         This only applies to ext* partition.
         """
-        abs_path = re.sub(r'\/\/+', '/', path)
+        abs_path = re.sub('\/\/+', '/', path)
         cmd = "{} {} -wR 'rm \"{}\"'".format(self.debugfs,
                                             self._get_part_image(pnum),
                                             abs_path)

@@ -19,11 +19,12 @@ SRC_URI = "file://ldconfig-native-2.12.1.tar.bz2 \
            file://ldconfig-handle-.dynstr-located-in-separate-segment.patch \
 "
 
+
 FILESEXTRAPATHS =. "${FILE_DIRNAME}/${P}:"
 
 inherit native
 
-S = "${UNPACKDIR}/${PN}-${PV}"
+S = "${WORKDIR}/${PN}-${PV}"
 
 do_compile () {
 	$CC ldconfig.c -std=gnu99 chroot_canon.c xmalloc.c xstrdup.c cache.c readlib.c  -I. dl-cache.c -o ldconfig

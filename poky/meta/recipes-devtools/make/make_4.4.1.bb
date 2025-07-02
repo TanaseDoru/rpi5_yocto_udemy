@@ -4,7 +4,6 @@ require make.inc
 
 SRC_URI += " \
            file://0001-m4-getloadavg.m4-restrict-AIX-specific-test-on-AIX.patch \
-           file://0001-Fix-signatures-for-getenv-getopt.patch \
            "
 
 EXTRA_OECONF += "--without-guile"

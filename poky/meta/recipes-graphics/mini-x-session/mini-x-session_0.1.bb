@@ -3,6 +3,7 @@ DESCRIPTION = "Simple session manager for X, that provides just the right boiler
 HOMEPAGE = "http://www.yoctoproject.org"
 BUGTRACKER = "http://bugzilla.pokylinux.org"
 
+
 LICENSE = "GPL-2.0-only"
 LIC_FILES_CHKSUM = "file://mini-x-session;endline=5;md5=b6430bffbcf05f9760e72938826b7487"
 
@@ -10,8 +11,7 @@ SECTION = "x11"
 RCONFLICTS:${PN} = "matchbox-common"
 
 SRC_URI = "file://mini-x-session"
-
-S = "${UNPACKDIR}"
+S = "${WORKDIR}"
 
 RDEPENDS:${PN} = "sudo"
 

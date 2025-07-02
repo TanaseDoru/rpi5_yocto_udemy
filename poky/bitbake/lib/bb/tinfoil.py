@@ -14,8 +14,7 @@ import time
 import atexit
 import re
 from collections import OrderedDict, defaultdict
-from functools import partial, wraps
-from contextlib import contextmanager
+from functools import partial
 
 import bb.cache
 import bb.cooker
@@ -26,135 +25,6 @@ import bb.command
 import bb.remotedata
 from bb.main import setup_bitbake, BitBakeConfigParameters
 import bb.fetch2
-
-def wait_for(f):
-    """
-    Wrap a function that makes an asynchronous tinfoil call using
-    self.run_command() and wait for events to say that the call has been
-    successful, or an error has occurred.
-    """
-    @wraps(f)
-    def wrapper(self, *args, handle_events=True, extra_events=None, event_callback=None, **kwargs):
-        if handle_events:
-            # A reasonable set of default events matching up with those we handle below
-            eventmask = [
-                        'bb.event.BuildStarted',
-                        'bb.event.BuildCompleted',
-                        'logging.LogRecord',
-                        'bb.event.NoProvider',
-                        'bb.command.CommandCompleted',
-                        'bb.command.CommandFailed',
-                        'bb.build.TaskStarted',
-                        'bb.build.TaskFailed',
-                        'bb.build.TaskSucceeded',
-                        'bb.build.TaskFailedSilent',
-                        'bb.build.TaskProgress',
-                        'bb.runqueue.runQueueTaskStarted',
-                        'bb.runqueue.sceneQueueTaskStarted',
-                        'bb.event.ProcessStarted',
-                        'bb.event.ProcessProgress',
-                        'bb.event.ProcessFinished',
-                        ]
-            if extra_events:
-                eventmask.extend(extra_events)
-            ret = self.set_event_mask(eventmask)
-
-        includelogs = self.config_data.getVar('BBINCLUDELOGS')
-        loglines = self.config_data.getVar('BBINCLUDELOGS_LINES')
-
-        # Call actual function
-        ret = f(self, *args, **kwargs)
-
-        if handle_events:
-            lastevent = time.time()
-            result = False
-            # Borrowed from knotty, instead somewhat hackily we use the helper
-            # as the object to store "shutdown" on
-            helper = bb.ui.uihelper.BBUIHelper()
-            helper.shutdown = 0
-            parseprogress = None
-            termfilter = bb.ui.knotty.TerminalFilter(helper, helper, self.logger.handlers, quiet=self.quiet)
-            try:
-                while True:
-                    try:
-                        event = self.wait_event(0.25)
-                        if event:
-                            lastevent = time.time()
-                            if event_callback and event_callback(event):
-                                continue
-                            if helper.eventHandler(event):
-                                if isinstance(event, bb.build.TaskFailedSilent):
-                                    self.logger.warning("Logfile for failed setscene task is %s" % event.logfile)
-                                elif isinstance(event, bb.build.TaskFailed):
-                                    bb.ui.knotty.print_event_log(event, includelogs, loglines, termfilter)
-                                continue
-                            if isinstance(event, bb.event.ProcessStarted):
-                                if self.quiet > 1:
-                                    continue
-                                parseprogress = bb.ui.knotty.new_progress(event.processname, event.total)
-                                parseprogress.start(False)
-                                continue
-                            if isinstance(event, bb.event.ProcessProgress):
-                                if self.quiet > 1:
-                                    continue
-                                if parseprogress:
-                                    parseprogress.update(event.progress)
-                                else:
-                                    bb.warn("Got ProcessProgress event for something that never started?")
-                                continue
-                            if isinstance(event, bb.event.ProcessFinished):
-                                if self.quiet > 1:
-                                    continue
-                                if parseprogress:
-                                    parseprogress.finish()
-                                parseprogress = None
-                                continue
-                            if isinstance(event, bb.command.CommandCompleted):
-                                result = True
-                                break
-                            if isinstance(event, (bb.command.CommandFailed, bb.command.CommandExit)):
-                                self.logger.error(str(event))
-                                result = False
-                                break
-                            if isinstance(event, logging.LogRecord):
-                                if event.taskpid == 0 or event.levelno > logging.INFO:
-                                    self.logger.handle(event)
-                                continue
-                            if isinstance(event, bb.event.NoProvider):
-                                self.logger.error(str(event))
-                                result = False
-                                break
-                        elif helper.shutdown > 1:
-                            break
-                        termfilter.updateFooter()
-                        if time.time() > (lastevent + (3*60)):
-                            if not self.run_command('ping', handle_events=False):
-                                print("\nUnable to ping server and no events, closing down...\n")
-                                return False
-                    except KeyboardInterrupt:
-                        termfilter.clearFooter()
-                        if helper.shutdown == 1:
-                            print("\nSecond Keyboard Interrupt, stopping...\n")
-                            ret = self.run_command("stateForceShutdown")
-                            if ret and ret[2]:
-                                self.logger.error("Unable to cleanly stop: %s" % ret[2])
-                        elif helper.shutdown == 0:
-                            print("\nKeyboard Interrupt, closing down...\n")
-                            interrupted = True
-                            ret = self.run_command("stateShutdown")
-                            if ret and ret[2]:
-                                self.logger.error("Unable to cleanly shutdown: %s" % ret[2])
-                        helper.shutdown = helper.shutdown + 1
-                termfilter.clearFooter()
-            finally:
-                termfilter.finish()
-            if helper.failed_tasks:
-                result = False
-            return result
-        else:
-            return ret
-
-    return wrapper
 
 
 # We need this in order to shut down the connection to the bitbake server,
@@ -318,19 +188,11 @@ class TinfoilCookerAdapter:
             self._cache[name] = attrvalue
             return attrvalue
 
-    class TinfoilSkiplistByMcAdapter:
-        def __init__(self, tinfoil):
-            self.tinfoil = tinfoil
-
-        def __getitem__(self, mc):
-            return self.tinfoil.get_skipped_recipes(mc)
-
     def __init__(self, tinfoil):
         self.tinfoil = tinfoil
         self.multiconfigs = [''] + (tinfoil.config_data.getVar('BBMULTICONFIG') or '').split()
         self.collections = {}
         self.recipecaches = {}
-        self.skiplist_by_mc = self.TinfoilSkiplistByMcAdapter(tinfoil)
         for mc in self.multiconfigs:
             self.collections[mc] = self.TinfoilCookerCollectionAdapter(tinfoil, mc)
             self.recipecaches[mc] = self.TinfoilRecipeCacheAdapter(tinfoil, mc)
@@ -339,6 +201,8 @@ class TinfoilCookerAdapter:
         # Grab these only when they are requested since they aren't always used
         if name in self._cache:
             return self._cache[name]
+        elif name == 'skiplist':
+            attrvalue = self.tinfoil.get_skipped_recipes()
         elif name == 'bbfile_config_priorities':
             ret = self.tinfoil.run_command('getLayerPriorities')
             bbfile_config_priorities = []
@@ -650,12 +514,12 @@ class Tinfoil:
         """
         return defaultdict(list, self.run_command('getOverlayedRecipes', mc))
 
-    def get_skipped_recipes(self, mc=''):
+    def get_skipped_recipes(self):
         """
         Find recipes which were skipped (i.e. SkipRecipe was raised
         during parsing).
         """
-        return OrderedDict(self.run_command('getSkippedRecipes', mc))
+        return OrderedDict(self.run_command('getSkippedRecipes'))
 
     def get_all_providers(self, mc=''):
         return defaultdict(list, self.run_command('allProviders', mc))
@@ -669,7 +533,6 @@ class Tinfoil:
     def get_runtime_providers(self, rdep):
         return self.run_command('getRuntimeProviders', rdep)
 
-    # TODO: teach this method about mc
     def get_recipe_file(self, pn):
         """
         Get the file name for the specified recipe/target. Raises
@@ -678,7 +541,6 @@ class Tinfoil:
         """
         best = self.find_best_provider(pn)
         if not best or (len(best) > 3 and not best[3]):
-            # TODO: pass down mc
             skiplist = self.get_skipped_recipes()
             taskdata = bb.taskdata.TaskData(None, skiplist=skiplist)
             skipreasons = taskdata.get_reasons(pn)
@@ -771,29 +633,6 @@ class Tinfoil:
         fn = self.get_recipe_file(pn)
         return self.parse_recipe_file(fn)
 
-    @contextmanager
-    def _data_tracked_if_enabled(self):
-        """
-        A context manager to enable data tracking for a code segment if data
-        tracking was enabled for this tinfoil instance.
-        """
-        if self.tracking:
-            # Enable history tracking just for the operation
-            self.run_command('enableDataTracking')
-
-        # Here goes the operation with the optional data tracking
-        yield
-
-        if self.tracking:
-            self.run_command('disableDataTracking')
-
-    def finalizeData(self):
-        """
-        Run anonymous functions and expand keys
-        """
-        with self._data_tracked_if_enabled():
-            return self._reconvert_type(self.run_command('finalizeData'), 'DataStoreConnectionHandle')
-
     def parse_recipe_file(self, fn, appends=True, appendlist=None, config_data=None):
         """
         Parse the specified recipe file (with or without bbappends)
@@ -806,7 +645,10 @@ class Tinfoil:
             appendlist: optional list of bbappend files to apply, if you
                         want to filter them
         """
-        with self._data_tracked_if_enabled():
+        if self.tracking:
+            # Enable history tracking just for the parse operation
+            self.run_command('enableDataTracking')
+        try:
             if appends and appendlist == []:
                 appends = False
             if config_data:
@@ -818,6 +660,9 @@ class Tinfoil:
                 return self._reconvert_type(dscon, 'DataStoreConnectionHandle')
             else:
                 return None
+        finally:
+            if self.tracking:
+                self.run_command('disableDataTracking')
 
     def build_file(self, buildfile, task, internal=True):
         """
@@ -828,10 +673,6 @@ class Tinfoil:
         BuildCompleted events will not be fired.
         """
         return self.run_command('buildFile', buildfile, task, internal)
-
-    @wait_for
-    def build_file_sync(self, *args):
-        self.build_file(*args)
 
     def build_targets(self, targets, task=None, handle_events=True, extra_events=None, event_callback=None):
         """

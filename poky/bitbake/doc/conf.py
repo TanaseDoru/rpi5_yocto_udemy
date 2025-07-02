@@ -17,8 +17,6 @@
 import sys
 import datetime
 
-from pathlib import Path
-
 current_version = "dev"
 
 # String used in sidebar
@@ -49,7 +47,6 @@ extlinks = {
 extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.extlinks',
-    'sphinx.ext.autodoc',
 ]
 autosectionlabel_prefix_document = True
 
@@ -102,7 +99,3 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # Remove the trailing 'dot' in section numbers
 html_secnumber_suffix = " "
-
-# autoconf needs the modules available to auto-generate documentation from the
-# code
-sys.path.insert(0, str(Path('..', 'lib').resolve()))

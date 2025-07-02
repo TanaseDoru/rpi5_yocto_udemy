@@ -51,14 +51,13 @@ fakeroot create_sdk_files() {
 	sed -i -e "s:##DEFAULT_INSTALL_DIR##:$escaped_sdkpath:" ${SDK_OUTPUT}/${SDKPATH}/relocate_sdk.py
 }
 
+
 fakeroot archive_sdk() {
 	cd ${SDK_OUTPUT}/${SDKPATH}
 
 	DEST="./${SDK_ARCH}-${SDK_OS}"
 	mv sysroots/${SDK_SYS} $DEST
 	rm sysroots -rf
-	# There is a check in meta/files/toolchain-shar-extract.sh -- make sure to
-	# keep that check up to date if changing the `1024`
 	patchelf --set-interpreter ${@''.join('a' for n in range(1024))} $DEST/usr/bin/patchelf
 	mv $DEST/usr/bin/patchelf $DEST/usr/bin/patchelf-uninative
 	${SDK_ARCHIVE_CMD}
