@@ -9,7 +9,7 @@
 		- Deploy & Package
 		- Q/A (Quality Assurance)
 	
-	## Directoare/Fisiere din Poky:
+## Directoare/Fisiere din Poky:
 		- build:
 			- conf
 				- local.conf -> fisier de configuratii globare pentru environment
@@ -24,7 +24,7 @@
 				- work	
 			- cache
 			- sstate-cache
-	### Fisiere care se gasesc in build/tmp/work/core2-64-poky-linux/dropbear (dropbear este reteta compilata prin bitbake)
+### Fisiere care se gasesc in build/tmp/work/core2-64-poky-linux/dropbear (dropbear este reteta compilata prin bitbake)
 		- build -> Se gasesc fisierele de build (.o)
 		- deploy-rpms -> fisiere de tip rpm specific
 		- dropbear-2022.83 -> Source Folder
