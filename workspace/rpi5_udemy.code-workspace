@@ -61,6 +61,10 @@
 			"**/build/downloads/**": true,
 			"**/build/sstate-cache/**": true,
 			"**/build/tmp/**": true
+		},
+		"files.associations": {
+			"*.conf": "bitbake",
+			"*.inc": "bitbake"
 		}
 	}
 }
