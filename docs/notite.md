@@ -157,6 +157,45 @@
 	- DISTRO_FEATURES in local.conf
 	- REQUIRED_DISTRO_FEATURES in recipe file
 
+# Section 8: Application SDK and DEVTOOL
+
+## Meta-toolchain:
+	- meta-toolchain -> App SDK generation (bitbake meta-toolchain)
+	meta-toolchain.bb face referire la populate_sdk.bbclass care face referire la populate_sdk_base.bbclass
+
+### Variabile din populate_sdk_base.bbclass
+	TOOLCHAIN_HOST_TASK = " " (ex : " qtbase libopenssl ") -> Task-uri pentru app development  
+	TOOLCHAIN_TARGET_TASK -> Target libraries care vor fi puse in target-sysroot
+	Ce TASK-uri punem in aceste variabile, vor fi puse in *tmp/deploy/sdk*
+	Aestea vor crea un script care incapsuleaza aceste task-uri . Instalation script: (tmp/deploy/sdk/<...>/toolchain.sh)
+### Instalare/Folosire SDK
+	Dupa ce se rukleaza script-ul vom avea un Filesystem cu mai multe fisiere si directoare:
+		-> environment-setup-... 			::script pentru a incepe cross-compilarea
+		-> site-config-target-poky-linux		::
+		-> version-target-poky-linux			::
+		-> sysroots
+			-> target-poky-linux 			::target sysroot -> libarii pentru compilare
+				-> ...
+			-> host-pokysdk-linux			::host sysroot -> compilation tools
+				-> ...
+
+	- rulam environment-setup-...
+	- cd myapp
+	- make all
+	
+## Conclution
+	- SDK este folosit pentru a seta mediul de compilare si este util pentru cross compilare. Astfel dupa ce rulam environemnt-setup imi face setup-ul pentru mediul pe care vreau sa rulez
+	- De ex daca un SDK pentru qt-6 pentru arhitectura ARM-64 dupa ce setez mediul pot face make si sa compilez un program pentru statia TARGET
+## Notes:
+	- Pentru ca SDK sa fie valid, am nevoie de un Makefile care se foloseste de variabilele de mediu (ex: $(CXX)), nu de comenzi predefinite
+	- Ex: Pentru a avea include-uri din SDK avem nevoie sa specificam INCLUDES += -I$(OECORE_TARGET_SYSROOT)/usr/include
+
+
+
+
+
+
+
 
 
 
