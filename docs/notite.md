@@ -81,11 +81,11 @@
 # Section 6: Recipes
 
 ## Terminologie
-	${PV}			-> Package Version
+	${PV}	   		-> Package Version
 	${PN} 			-> Package name
-	${S} 			-> Source Directory (${WORKDIR}/${PN}_${PV})
-	${D}			-> Destination Directory (${WORKDIR}/Image)
-	${B}			-> Build Directory (De obicei este ${S} sau ${WORKDIR}/build)
+	${S} 		  	-> Source Directory (${WORKDIR}/${PN}_${PV})
+	${D}			  -> Destination Directory (${WORKDIR}/Image)
+	${B}		  	-> Build Directory (De obicei este ${S} sau ${WORKDIR}/build)
 	${includedir}		-> Header files (.h) (${D}/usr/include)
 	${bindir}		-> ${D}/usr/bin
 	${libdir}		-> ${D}/usr/lib
@@ -190,9 +190,24 @@
 	- Pentru ca SDK sa fie valid, am nevoie de un Makefile care se foloseste de variabilele de mediu (ex: $(CXX)), nu de comenzi predefinite
 	- Ex: Pentru a avea include-uri din SDK avem nevoie sa specificam INCLUDES += -I$(OECORE_TARGET_SYSROOT)/usr/include
 
-
-
-
+## DEVTOOL
+	. oe-init-build-env
+	devtool modify <recipe>
+	- Este folosit pentru a face mai usoara modificari ulterioare aduse unor retete (Sa nu facem override pe SRC_URI cu un fisier local)
+	- Se creaza directorul poky/build/workspace unde se salveaza fisierele astfel:
+		- ./appends 		:: Director care contine fisierele .bbappend pentru retetele pe care s-au folosit DEVTOOL
+		- ./sources		:: Sursele retetelor peste care s-au folosit devtool. In aceste surse putem face modificarile necesare
+	- Dupa care trebuie sa face patching -> Adica un commit daca avem un repo de git
+	- Dupa care trebuie sa facem
+		devtool update-recipe <recipe> -a <layerpath> 
+		Pentru a face write pe layer cu .bbappend
+	- La final trebuie sa facem
+		devtool reset <recipe>
+		Pentru a sterge fisierele din workspace
+		In plus, putem sterge si directorul workspace, si sa stergem directorul workspace din bblayers
+	
+# Section 9: Machines:
+    - 
 
 
 
