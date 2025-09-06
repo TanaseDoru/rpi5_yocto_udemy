@@ -207,7 +207,20 @@
 		In plus, putem sterge si directorul workspace, si sa stergem directorul workspace din bblayers
 	
 # Section 9: Machines:
-    - 
+    - Pentru a seta machine: se pune in build/conf/local.conf:
+      - MACHINE = ""
+## Variabile din fisierul Machine
+    - TARGET_ARCH -> Architecture of the processor 
+    - PREFFERED_PROVIDER_virtual/kernel -> setam un recipe pentru Kernel 
+    - MACHINE_FEATURES 
+    - SERIAL_CONSOLES
+    - KERNEL_IMAGETYPE -> What kind of image is the kernel(compressed, u-boot image etc. )
+    - IMAGE_FSTYPE -> output format 
+    - KERNEL_DEVICETREE -> Specifica deviceTree-ul Kernel-ului
+    - UBOOT_MACHINE -> Daca avem suport pentru u-boot 
+
+    Pentru a elimina un feature se poate face:
+      - MACHINE_FEATURES:remove = "keyboard" - intr-un layer separat pentru a face override separat, si sa nu modificam direct pe configurarile din layerele clonate
 
 
 

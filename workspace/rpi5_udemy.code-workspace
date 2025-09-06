@@ -3,16 +3,7 @@
 		{
 			"name": "VSCodeWorkspace",
 			"path": ".."
-		},
-		{
-			"path": "../workspace"
-		},
-		{
-			"path": "../docs"
-		},
-		{
-			"path": "../poky"
-		},
+		}
 	],
 	"settings": {
 		"files.exclude": {
